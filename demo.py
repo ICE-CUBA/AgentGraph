@@ -151,11 +151,33 @@ def run_demo(agent_data: dict):
     print(f"   ✓ Context manager with nested events")
     
     print("\n" + "=" * 50)
+    print("🔍 Testing Agent Query Interface")
+    print("=" * 50)
+    
+    # Demo the query interface
+    queries = [
+        "what tools were used?",
+        "show me errors",
+        "what happened to Alice?",
+        "what did the agent do recently?"
+    ]
+    
+    for question in queries:
+        result = client.query(question)
+        print(f"\n❓ {question}")
+        print(f"   💬 {result['answer']}")
+    
+    print("\n" + "=" * 50)
     print("🎉 Demo complete!")
     print("=" * 50)
     print("\n📌 Open http://localhost:8080 to see the dashboard")
-    print("   📊 Events tab - See agent activity")
-    print("   🕸️ Graph tab - Visualize entity relationships")
+    print("   📊 Events tab - Real-time agent activity")
+    print("   🕸️ Graph tab - Entity relationship visualization")
+    print("   🔍 Query API - Ask questions about agent activity")
+    print("\n💡 Try in Python:")
+    print("   from agentgraph import AgentGraphClient")
+    print("   client = AgentGraphClient(api_key='...')")
+    print("   client.query('what happened to customer X?')")
 
 
 def main():

@@ -532,6 +532,82 @@ async def create_relationship(
 
 # ==================== Graph Query Endpoints ====================
 
+# ==================== Query Endpoints ====================
+
+class QueryRequest(BaseModel):
+    question: str
+    agent_id: Optional[str] = None
+    context: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SearchRequest(BaseModel):
+    query: str
+    entity_type: Optional[str] = None
+    limit: int = 50
+
+
+@app.post("/query")
+async def query_graph(request: QueryRequest):
+    """
+    Ask a natural language question about agent activity.
+    
+    Examples:
+    - "what happened to customer X?"
+    - "what did agent Y do?"
+    - "show me errors from today"
+    - "what tools were used?"
+    """
+    result = db.query_graph(
+        question=request.question,
+        context=request.context
+    )
+    
+    # Broadcast query to WebSocket (for dashboard visibility)
+    await manager.broadcast_event("query", {
+        "question": request.question,
+        "answer": result["answer"]
+    })
+    
+    return result
+
+
+@app.get("/search/events")
+async def search_events(
+    q: str,
+    agent_id: Optional[str] = None,
+    limit: int = 50
+):
+    """Search events by keyword."""
+    events = db.search_events(query=q, agent_id=agent_id, limit=limit)
+    return [e.to_dict() for e in events]
+
+
+@app.get("/search/entities")
+async def search_entities(
+    q: str,
+    entity_type: Optional[str] = None,
+    limit: int = 50
+):
+    """Search entities by name or metadata."""
+    entities = db.search_entities(query=q, entity_type=entity_type, limit=limit)
+    return [e.to_dict() for e in entities]
+
+
+@app.get("/entities/{entity_id}/history")
+async def get_entity_history(entity_id: str, limit: int = 100):
+    """Get all events that reference an entity."""
+    entity = db.get_entity(entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    events = db.get_entity_history(entity_id, limit=limit)
+    return {
+        "entity": entity.to_dict(),
+        "events": [e.to_dict() for e in events],
+        "count": len(events)
+    }
+
+
 @app.get("/graph/timeline")
 async def get_timeline(
     agent_id: Optional[str] = None,

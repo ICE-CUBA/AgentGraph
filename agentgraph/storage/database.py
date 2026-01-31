@@ -427,6 +427,194 @@ class Database:
             cursor.execute("SELECT * FROM relationships ORDER BY created_at DESC LIMIT ?", (limit,))
             return [self._row_to_relationship(row) for row in cursor.fetchall()]
     
+    # ==================== Search & Query ====================
+    
+    def search_events(
+        self,
+        query: str,
+        agent_id: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Event]:
+        """
+        Search events by action, description, or metadata.
+        Simple keyword matching for MVP. Can upgrade to vector search later.
+        """
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            
+            # Build search query - search in action, description, and metadata
+            search_term = f"%{query.lower()}%"
+            
+            sql = """
+                SELECT * FROM events 
+                WHERE (
+                    LOWER(action) LIKE ? OR 
+                    LOWER(description) LIKE ? OR
+                    LOWER(metadata) LIKE ? OR
+                    LOWER(input_data) LIKE ? OR
+                    LOWER(output_data) LIKE ?
+                )
+            """
+            params = [search_term] * 5
+            
+            if agent_id:
+                sql += " AND agent_id = ?"
+                params.append(agent_id)
+            
+            sql += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(sql, params)
+            return [self._row_to_event(row) for row in cursor.fetchall()]
+    
+    def search_entities(
+        self,
+        query: str,
+        entity_type: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Entity]:
+        """Search entities by name or metadata."""
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            
+            search_term = f"%{query.lower()}%"
+            
+            sql = """
+                SELECT * FROM entities 
+                WHERE (LOWER(name) LIKE ? OR LOWER(metadata) LIKE ?)
+            """
+            params = [search_term, search_term]
+            
+            if entity_type:
+                sql += " AND type = ?"
+                params.append(entity_type)
+            
+            sql += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(sql, params)
+            return [self._row_to_entity(row) for row in cursor.fetchall()]
+    
+    def get_entity_history(self, entity_id: str, limit: int = 100) -> List[Event]:
+        """Get all events that reference an entity."""
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM events 
+                WHERE related_entity_ids LIKE ?
+                ORDER BY timestamp DESC LIMIT ?
+            """, (f'%{entity_id}%', limit))
+            return [self._row_to_event(row) for row in cursor.fetchall()]
+    
+    def query_graph(
+        self,
+        question: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Answer a natural language question about agent activity.
+        
+        Supports queries like:
+        - "what happened to X?"
+        - "what did agent Y do?"
+        - "show me errors from today"
+        - "what tools were used?"
+        """
+        question_lower = question.lower()
+        results = {
+            "question": question,
+            "answer": "",
+            "events": [],
+            "entities": [],
+            "summary": {}
+        }
+        
+        # Extract potential entity/agent names from question
+        # Simple keyword extraction for MVP
+        words = question_lower.replace("?", "").replace(".", "").split()
+        
+        # Detect query type and execute appropriate search
+        if any(w in question_lower for w in ["error", "fail", "wrong", "issue", "problem"]):
+            # Error-focused query
+            events = self.list_events(limit=50)
+            error_events = [e for e in events if e.status == "error"]
+            results["events"] = [e.to_dict() for e in error_events[:20]]
+            results["answer"] = f"Found {len(error_events)} error events."
+            results["summary"] = {
+                "total_errors": len(error_events),
+                "error_types": list(set(e.action for e in error_events))
+            }
+            
+        elif any(w in question_lower for w in ["tool", "function", "call"]):
+            # Tool usage query
+            events = self.list_events(event_type="tool.call", limit=50)
+            results["events"] = [e.to_dict() for e in events]
+            tool_names = list(set(e.action for e in events))
+            results["answer"] = f"Found {len(events)} tool calls. Tools used: {', '.join(tool_names)}"
+            results["summary"] = {"tools": tool_names, "total_calls": len(events)}
+            
+        elif "agent" in question_lower:
+            # Agent-focused query
+            agents = self.list_agents()
+            for agent in agents:
+                if agent.name.lower() in question_lower:
+                    events = self.list_events(agent_id=agent.id, limit=30)
+                    results["events"] = [e.to_dict() for e in events]
+                    results["answer"] = f"Agent '{agent.name}' has {len(events)} recent events."
+                    results["summary"] = {
+                        "agent": agent.to_dict(),
+                        "event_count": len(events)
+                    }
+                    break
+            else:
+                # List all agents
+                results["answer"] = f"Found {len(agents)} agents: {', '.join(a.name for a in agents)}"
+                results["summary"] = {"agents": [a.to_dict() for a in agents]}
+                
+        elif any(w in question_lower for w in ["decision", "decide", "chose", "choice"]):
+            # Decision query
+            events = self.list_events(event_type="decision", limit=50)
+            results["events"] = [e.to_dict() for e in events]
+            results["answer"] = f"Found {len(events)} decision events."
+            
+        elif any(w in question_lower for w in ["today", "recent", "latest", "last"]):
+            # Recent activity query
+            events = self.list_events(limit=30)
+            results["events"] = [e.to_dict() for e in events]
+            success_count = len([e for e in events if e.status == "success"])
+            error_count = len([e for e in events if e.status == "error"])
+            results["answer"] = f"Found {len(events)} recent events. {success_count} successful, {error_count} errors."
+            results["summary"] = {"success": success_count, "errors": error_count}
+            
+        else:
+            # General search - try to find matching entities or events
+            # Extract meaningful words (skip common words)
+            skip_words = {"what", "happened", "to", "the", "a", "an", "did", "do", "show", "me", "find", "get", "who", "when", "where", "how", "with"}
+            search_terms = [w for w in words if w not in skip_words and len(w) > 2]
+            
+            if search_terms:
+                search_query = " ".join(search_terms)
+                
+                # Search entities first
+                entities = self.search_entities(search_query)
+                if entities:
+                    results["entities"] = [e.to_dict() for e in entities]
+                    
+                    # Get events for first matching entity
+                    if entities:
+                        entity_events = self.get_entity_history(entities[0].id)
+                        results["events"] = [e.to_dict() for e in entity_events]
+                        results["answer"] = f"Found entity '{entities[0].name}' with {len(entity_events)} related events."
+                else:
+                    # Fall back to event search
+                    events = self.search_events(search_query)
+                    results["events"] = [e.to_dict() for e in events]
+                    results["answer"] = f"Found {len(events)} events matching '{search_query}'."
+            else:
+                results["answer"] = "I couldn't understand the query. Try asking about specific agents, tools, errors, or entities."
+        
+        return results
+    
     # ==================== Analytics ====================
     
     def get_agent_stats(self, agent_id: str) -> Dict[str, Any]:

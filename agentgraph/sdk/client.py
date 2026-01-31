@@ -220,6 +220,59 @@ class AgentGraphClient:
         result = self._request("POST", "/relationships", json=payload)
         return result["id"]
     
+    # ==================== Query Methods ====================
+    
+    def query(
+        self,
+        question: str,
+        context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Ask a natural language question about agent activity.
+        
+        Args:
+            question: Natural language question like "what happened to customer X?"
+            context: Optional context to help answer the question
+        
+        Returns:
+            Dict with answer, matching events, entities, and summary
+        
+        Examples:
+            >>> client.query("what happened to customer X?")
+            >>> client.query("what tools were used?")
+            >>> client.query("show me errors from today")
+            >>> client.query("what did agent Y do?")
+        """
+        payload = {
+            "question": question,
+            "context": context or {}
+        }
+        return self._request("POST", "/query", json=payload)
+    
+    def search_events(
+        self,
+        query: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Search events by keyword."""
+        return self._request("GET", f"/search/events?q={query}&limit={limit}")
+    
+    def search_entities(
+        self,
+        query: str,
+        entity_type: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Search entities by name or metadata."""
+        url = f"/search/entities?q={query}&limit={limit}"
+        if entity_type:
+            url += f"&entity_type={entity_type}"
+        return self._request("GET", url)
+    
+    def get_entity_history(self, entity_id: str) -> Dict[str, Any]:
+        """Get all events that reference an entity."""
+        return self._request("GET", f"/entities/{entity_id}/history")
+    
     # ==================== Convenience Methods ====================
     
     def log_tool_call(
