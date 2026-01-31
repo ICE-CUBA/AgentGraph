@@ -262,6 +262,14 @@ Tracks:
 - `GET /search/semantic?q=...` — Embedding-based intelligent search
 - `GET /search/similar/{event_id}` — Find similar events
 
+### Cross-Agent Sharing
+- `POST /share/connect` — Connect to sharing hub
+- `POST /share/subscribe` — Subscribe to events from other agents
+- `POST /share/publish` — Share context with subscribed agents
+- `GET /share/agents` — List connected agents
+- `POST /share/claim/{entity_id}` — Claim exclusive work on entity
+- `GET /share/query?q=...` — Query shared context
+
 ### Health
 - `GET /health` — Health check
 
@@ -304,11 +312,13 @@ Tracks:
 - [x] CrewAI integration
 - [x] Semantic/vector search with embeddings
 
-### Phase 3: Active Sharing
-- [ ] Cross-agent context protocol
-- [ ] Bi-directional event streaming
-- [ ] Conflict detection & alerts
-- [ ] Multi-tenant support
+### Phase 3: Active Sharing (✅ Complete)
+- [x] Cross-agent context protocol
+- [x] SharingHub for real-time coordination
+- [x] Topic-based subscriptions
+- [x] Conflict detection (entity claims)
+- [x] Event history for late joiners
+- [ ] Multi-tenant support (Phase 4)
 
 ### Phase 4: Cloud Platform
 - [ ] Hosted cloud version
