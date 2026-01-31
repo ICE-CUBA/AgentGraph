@@ -106,6 +106,61 @@ share("Found 3 key insights", topic="research", data={"insights": [...]})
 # Other agents receive this in real-time
 ```
 
+## 🔍 Agent Registry
+
+Agents discover and coordinate with each other:
+
+```python
+from agentgraph import register_agent, discover_agents, heartbeat
+
+# Register your agent with capabilities
+agent = register_agent(
+    name="TranslatorBot",
+    capabilities=["translate", "summarize"],
+    description="Translates and summarizes text"
+)
+
+# Find agents that can help
+translators = discover_agents("translate")
+for t in translators:
+    print(f"{t.name} is {t.status}")  # "TranslatorBot is online"
+
+# Keep your agent alive
+heartbeat(agent.id)  # Call periodically
+```
+
+### Capability Metadata
+
+```python
+# Register with detailed capabilities
+register_agent(
+    name="CodeReviewer",
+    capabilities=[
+        {"name": "code_review", "metadata": {"languages": ["python", "typescript"]}},
+        {"name": "security_audit", "metadata": {"frameworks": ["django", "fastapi"]}}
+    ]
+)
+
+# Find Python code reviewers specifically
+python_reviewers = discover_agents("code_review", languages="python")
+```
+
+### CLI
+
+```bash
+# List all registered agents
+agentgraph registry list
+
+# Register via CLI
+agentgraph registry register MyBot -c search -c summarize -d "My helpful bot"
+
+# Find agents by capability
+agentgraph registry discover translate
+
+# Check stats
+agentgraph registry stats
+```
+
 ## 💪 Full SDK (More Control)
 
 For production use with custom configuration:
