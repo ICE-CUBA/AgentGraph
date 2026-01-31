@@ -6,6 +6,7 @@ FastAPI-based REST API for agent activity tracking with WebSocket support.
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
@@ -84,9 +85,12 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # CORS middleware
+# SECURITY: In production, configure AGENTGRAPH_CORS_ORIGINS environment variable
+# e.g., AGENTGRAPH_CORS_ORIGINS="https://yourdomain.com,https://app.yourdomain.com"
+cors_origins = os.environ.get("AGENTGRAPH_CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,11 +111,12 @@ class AgentCreate(BaseModel):
 
 
 class AgentResponse(BaseModel):
+    """Agent response - NOTE: api_key only included on create"""
     id: str
     name: str
     platform: str
     owner_id: Optional[str]
-    api_key: str
+    api_key: Optional[str] = None  # Only returned on creation
     config: Dict[str, Any]
     capabilities: List[str]
     is_active: bool
@@ -193,13 +198,27 @@ async def health_check():
 # ==================== WebSocket Endpoint ====================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     """
     WebSocket endpoint for real-time event streaming.
     
     Connect to receive live events as they happen.
     Messages are JSON with format: {"type": "event_type", "data": {...}, "timestamp": "..."}
+    
+    Authentication: Pass API key as ?token=YOUR_API_KEY query parameter.
+    If AGENTGRAPH_WS_AUTH_REQUIRED=true, authentication is required.
     """
+    # SECURITY: Optional authentication for WebSocket
+    require_auth = os.environ.get("AGENTGRAPH_WS_AUTH_REQUIRED", "false").lower() == "true"
+    if require_auth:
+        if not token:
+            await websocket.close(code=4001, reason="Authentication required")
+            return
+        agent = db.get_agent_by_api_key(token)
+        if not agent:
+            await websocket.close(code=4001, reason="Invalid token")
+            return
+    
     await manager.connect(websocket)
     try:
         # Send welcome message
@@ -261,7 +280,7 @@ async def create_agent(agent_data: AgentCreate):
 
 @app.get("/agents", response_model=List[AgentResponse])
 async def list_agents(owner_id: Optional[str] = None):
-    """List all registered agents."""
+    """List all registered agents. NOTE: API keys are NOT returned for security."""
     agents = db.list_agents(owner_id=owner_id)
     return [
         AgentResponse(
@@ -269,7 +288,7 @@ async def list_agents(owner_id: Optional[str] = None):
             name=a.name,
             platform=a.platform,
             owner_id=a.owner_id,
-            api_key=a.api_key,
+            api_key=None,  # SECURITY: Never expose API keys in list
             config=a.config,
             capabilities=a.capabilities,
             is_active=a.is_active,
@@ -383,6 +402,9 @@ async def create_events_batch(
     return {"created": len(created_events), "event_ids": created_events}
 
 
+# SECURITY: Maximum limits to prevent resource exhaustion
+MAX_LIMIT = 1000
+
 @app.get("/events", response_model=List[EventResponse])
 async def list_events(
     agent_id: Optional[str] = None,
@@ -391,6 +413,7 @@ async def list_events(
     limit: int = 100,
     offset: int = 0
 ):
+    limit = min(limit, MAX_LIMIT)  # Cap the limit
     """List events with optional filters."""
     events = db.list_events(
         agent_id=agent_id,
