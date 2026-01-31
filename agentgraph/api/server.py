@@ -7,8 +7,12 @@ FastAPI-based REST API for agent activity tracking.
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from ..core.schema import Agent, Entity, Event, EventType, EntityType, Relationship, RelationType, Session
@@ -416,6 +420,20 @@ async def get_timeline(
         timeline[hour_key]["types"][event_type] = timeline[hour_key]["types"].get(event_type, 0) + 1
     
     return {"timeline": timeline, "total_events": len(events)}
+
+
+# ==================== Dashboard ====================
+
+# Serve dashboard
+DASHBOARD_DIR = Path(__file__).parent.parent.parent / "dashboard"
+
+@app.get("/")
+async def dashboard():
+    """Serve the dashboard."""
+    index_path = DASHBOARD_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    return {"message": "AgentGraph API", "docs": "/docs"}
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):

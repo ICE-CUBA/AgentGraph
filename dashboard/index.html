@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGraph Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .event-card { transition: all 0.2s; }
+        .event-card:hover { transform: translateX(4px); }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between max-w-7xl mx-auto">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🧠</span>
+                    <h1 class="text-xl font-bold">AgentGraph</h1>
+                    <span class="text-gray-400 text-sm">Dashboard</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-400">
+                        {{ agents.length }} agents · {{ events.length }} events
+                    </span>
+                    <button @click="refresh" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
+                        ↻ Refresh
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="text-gray-400 text-sm mb-1">Total Agents</div>
+                    <div class="text-3xl font-bold">{{ agents.length }}</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="text-gray-400 text-sm mb-1">Total Events</div>
+                    <div class="text-3xl font-bold">{{ events.length }}</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="text-gray-400 text-sm mb-1">Success Rate</div>
+                    <div class="text-3xl font-bold text-green-400">{{ successRate }}%</div>
+                </div>
+                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div class="text-gray-400 text-sm mb-1">Active Sessions</div>
+                    <div class="text-3xl font-bold">{{ activeSessions }}</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Agents List -->
+                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                        <h2 class="font-semibold">Agents</h2>
+                        <button @click="showRegisterModal = true" class="text-blue-400 hover:text-blue-300 text-sm">
+                            + Register
+                        </button>
+                    </div>
+                    <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+                        <div v-if="agents.length === 0" class="p-6 text-gray-500 text-center">
+                            No agents registered
+                        </div>
+                        <div v-for="agent in agents" :key="agent.id" 
+                             @click="selectAgent(agent)"
+                             class="px-6 py-4 hover:bg-gray-750 cursor-pointer"
+                             :class="{ 'bg-gray-750': selectedAgent?.id === agent.id }">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium">{{ agent.name }}</div>
+                                    <div class="text-sm text-gray-400">{{ agent.platform || 'custom' }}</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" 
+                                          :class="agent.is_active ? 'bg-green-400' : 'bg-gray-500'"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events Feed -->
+                <div class="lg:col-span-2 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                        <h2 class="font-semibold">
+                            Events
+                            <span v-if="selectedAgent" class="text-gray-400 font-normal">
+                                — {{ selectedAgent.name }}
+                            </span>
+                        </h2>
+                        <select v-model="eventFilter" class="bg-gray-700 border-gray-600 rounded px-3 py-1 text-sm">
+                            <option value="">All Types</option>
+                            <option value="action.complete">Actions</option>
+                            <option value="tool.call">Tool Calls</option>
+                            <option value="decision">Decisions</option>
+                            <option value="action.error">Errors</option>
+                        </select>
+                    </div>
+                    <div class="divide-y divide-gray-700 max-h-[600px] overflow-y-auto">
+                        <div v-if="filteredEvents.length === 0" class="p-6 text-gray-500 text-center">
+                            No events found
+                        </div>
+                        <div v-for="event in filteredEvents" :key="event.id" 
+                             class="event-card px-6 py-4 hover:bg-gray-750">
+                            <div class="flex items-start gap-4">
+                                <div class="mt-1">
+                                    <span class="text-xl">{{ getEventIcon(event.type) }}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-medium">{{ event.action || event.type }}</span>
+                                        <span class="px-2 py-0.5 text-xs rounded-full"
+                                              :class="getStatusClass(event.status)">
+                                            {{ event.status }}
+                                        </span>
+                                        <span v-if="event.duration_ms" class="text-xs text-gray-500">
+                                            {{ event.duration_ms }}ms
+                                        </span>
+                                    </div>
+                                    <div v-if="event.description" class="text-sm text-gray-400 mb-2">
+                                        {{ event.description }}
+                                    </div>
+                                    <div v-if="event.input_data" class="text-xs bg-gray-900 rounded p-2 mb-2 font-mono overflow-x-auto">
+                                        {{ JSON.stringify(event.input_data, null, 2) }}
+                                    </div>
+                                    <div v-if="event.error_message" class="text-xs text-red-400">
+                                        ⚠️ {{ event.error_message }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-2">
+                                        {{ formatTime(event.timestamp) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Register Modal -->
+        <div v-if="showRegisterModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+                <h3 class="text-lg font-semibold mb-4">Register New Agent</h3>
+                <form @submit.prevent="registerAgent">
+                    <div class="mb-4">
+                        <label class="block text-sm text-gray-400 mb-1">Name</label>
+                        <input v-model="newAgent.name" type="text" required
+                               class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm text-gray-400 mb-1">Platform</label>
+                        <select v-model="newAgent.platform" 
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2">
+                            <option value="custom">Custom</option>
+                            <option value="langchain">LangChain</option>
+                            <option value="openai">OpenAI Assistants</option>
+                            <option value="crewai">CrewAI</option>
+                            <option value="openclaw">OpenClaw</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-3 justify-end">
+                        <button type="button" @click="showRegisterModal = false"
+                                class="px-4 py-2 text-gray-400 hover:text-white">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium">
+                            Register
+                        </button>
+                    </div>
+                </form>
+                <div v-if="registeredApiKey" class="mt-4 p-4 bg-gray-900 rounded-lg">
+                    <div class="text-sm text-gray-400 mb-1">API Key (save this!):</div>
+                    <code class="text-green-400 text-sm break-all">{{ registeredApiKey }}</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        
+        const API_BASE = window.location.origin;
+        
+        createApp({
+            setup() {
+                const agents = ref([]);
+                const events = ref([]);
+                const selectedAgent = ref(null);
+                const eventFilter = ref('');
+                const showRegisterModal = ref(false);
+                const newAgent = ref({ name: '', platform: 'custom' });
+                const registeredApiKey = ref('');
+                
+                const successRate = computed(() => {
+                    if (events.value.length === 0) return 100;
+                    const successful = events.value.filter(e => e.status === 'success').length;
+                    return Math.round((successful / events.value.length) * 100);
+                });
+                
+                const activeSessions = computed(() => {
+                    const sessionIds = new Set(events.value.map(e => e.session_id).filter(Boolean));
+                    return sessionIds.size;
+                });
+                
+                const filteredEvents = computed(() => {
+                    let filtered = events.value;
+                    if (selectedAgent.value) {
+                        filtered = filtered.filter(e => e.agent_id === selectedAgent.value.id);
+                    }
+                    if (eventFilter.value) {
+                        filtered = filtered.filter(e => e.type === eventFilter.value);
+                    }
+                    return filtered.slice(0, 100);
+                });
+                
+                const fetchAgents = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/agents`);
+                        agents.value = await res.json();
+                    } catch (e) {
+                        console.error('Failed to fetch agents:', e);
+                    }
+                };
+                
+                const fetchEvents = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/events?limit=100`);
+                        events.value = await res.json();
+                    } catch (e) {
+                        console.error('Failed to fetch events:', e);
+                    }
+                };
+                
+                const refresh = () => {
+                    fetchAgents();
+                    fetchEvents();
+                };
+                
+                const selectAgent = (agent) => {
+                    selectedAgent.value = selectedAgent.value?.id === agent.id ? null : agent;
+                };
+                
+                const registerAgent = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/agents`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newAgent.value)
+                        });
+                        const data = await res.json();
+                        registeredApiKey.value = data.api_key;
+                        newAgent.value = { name: '', platform: 'custom' };
+                        fetchAgents();
+                    } catch (e) {
+                        console.error('Failed to register agent:', e);
+                    }
+                };
+                
+                const getEventIcon = (type) => {
+                    const icons = {
+                        'action.start': '▶️',
+                        'action.complete': '✅',
+                        'action.error': '❌',
+                        'tool.call': '🔧',
+                        'tool.result': '📤',
+                        'decision': '🤔',
+                        'reasoning': '💭',
+                        'message.sent': '📨',
+                        'message.received': '📩',
+                        'memory.store': '💾',
+                        'memory.retrieve': '📂',
+                        'state.change': '🔄',
+                    };
+                    return icons[type] || '📌';
+                };
+                
+                const getStatusClass = (status) => {
+                    return {
+                        'success': 'bg-green-900 text-green-300',
+                        'error': 'bg-red-900 text-red-300',
+                        'pending': 'bg-yellow-900 text-yellow-300'
+                    }[status] || 'bg-gray-700 text-gray-300';
+                };
+                
+                const formatTime = (timestamp) => {
+                    return new Date(timestamp).toLocaleString();
+                };
+                
+                onMounted(() => {
+                    refresh();
+                    // Auto-refresh every 10 seconds
+                    setInterval(refresh, 10000);
+                });
+                
+                return {
+                    agents,
+                    events,
+                    selectedAgent,
+                    eventFilter,
+                    showRegisterModal,
+                    newAgent,
+                    registeredApiKey,
+                    successRate,
+                    activeSessions,
+                    filteredEvents,
+                    refresh,
+                    selectAgent,
+                    registerAgent,
+                    getEventIcon,
+                    getStatusClass,
+                    formatTime
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
