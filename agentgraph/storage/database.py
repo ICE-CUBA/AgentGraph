@@ -413,6 +413,20 @@ class Database:
             ended_at=datetime.fromisoformat(row["ended_at"]) if row["ended_at"] else None
         )
     
+    def list_entities(self, limit: int = 500) -> List[Entity]:
+        """List all entities."""
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM entities ORDER BY created_at DESC LIMIT ?", (limit,))
+            return [self._row_to_entity(row) for row in cursor.fetchall()]
+    
+    def list_relationships(self, limit: int = 1000) -> List[Relationship]:
+        """List all relationships."""
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM relationships ORDER BY created_at DESC LIMIT ?", (limit,))
+            return [self._row_to_relationship(row) for row in cursor.fetchall()]
+    
     # ==================== Analytics ====================
     
     def get_agent_stats(self, agent_id: str) -> Dict[str, Any]:

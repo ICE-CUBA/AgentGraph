@@ -165,6 +165,61 @@ class AgentGraphClient:
         """Set the current session ID."""
         self.session_id = session_id
     
+    # ==================== Entity & Relationship Methods ====================
+    
+    def create_entity(
+        self,
+        entity_type: str,
+        name: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Create an entity in the graph.
+        
+        Args:
+            entity_type: Type of entity (user, task, document, tool, resource, custom)
+            name: Name of the entity
+            metadata: Additional metadata
+        
+        Returns:
+            Entity ID
+        """
+        payload = {
+            "type": entity_type,
+            "name": name,
+            "metadata": metadata or {}
+        }
+        result = self._request("POST", "/entities", json=payload)
+        return result["id"]
+    
+    def create_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        relationship_type: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Create a relationship between entities.
+        
+        Args:
+            source_id: Source entity ID
+            target_id: Target entity ID
+            relationship_type: Type of relationship (created, modified, referenced, depends_on, etc.)
+            metadata: Additional metadata
+        
+        Returns:
+            Relationship ID
+        """
+        payload = {
+            "source_entity_id": source_id,
+            "target_entity_id": target_id,
+            "type": relationship_type,
+            "metadata": metadata or {}
+        }
+        result = self._request("POST", "/relationships", json=payload)
+        return result["id"]
+    
     # ==================== Convenience Methods ====================
     
     def log_tool_call(

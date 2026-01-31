@@ -398,6 +398,40 @@ async def get_entity_relationships(entity_id: str, direction: str = "both"):
     return [r.to_dict() for r in relationships]
 
 
+# ==================== Relationship Endpoints ====================
+
+class RelationshipCreate(BaseModel):
+    source_entity_id: str
+    target_entity_id: str
+    type: str = "referenced"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+@app.post("/relationships")
+async def create_relationship(
+    rel_data: RelationshipCreate,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Create a relationship between entities."""
+    # Verify entities exist
+    source = db.get_entity(rel_data.source_entity_id)
+    target = db.get_entity(rel_data.target_entity_id)
+    
+    if not source:
+        raise HTTPException(status_code=404, detail="Source entity not found")
+    if not target:
+        raise HTTPException(status_code=404, detail="Target entity not found")
+    
+    rel = Relationship(
+        type=RelationType(rel_data.type) if rel_data.type in [r.value for r in RelationType] else RelationType.REFERENCED,
+        source_entity_id=rel_data.source_entity_id,
+        target_entity_id=rel_data.target_entity_id,
+        metadata=rel_data.metadata
+    )
+    db.create_relationship(rel)
+    return rel.to_dict()
+
+
 # ==================== Graph Query Endpoints ====================
 
 @app.get("/graph/timeline")
@@ -420,6 +454,67 @@ async def get_timeline(
         timeline[hour_key]["types"][event_type] = timeline[hour_key]["types"].get(event_type, 0) + 1
     
     return {"timeline": timeline, "total_events": len(events)}
+
+
+@app.get("/graph/data")
+async def get_graph_data(include_agents: bool = True, limit: int = 500):
+    """
+    Get graph data for D3.js visualization.
+    Returns nodes (entities + optionally agents) and links (relationships).
+    """
+    nodes = []
+    links = []
+    node_ids = set()
+    
+    # Add entities as nodes
+    entities = db.list_entities(limit=limit)
+    for entity in entities:
+        nodes.append({
+            "id": entity.id,
+            "name": entity.name or entity.id[:8],
+            "type": entity.type.value,
+            "group": entity.type.value,
+            "metadata": entity.metadata
+        })
+        node_ids.add(entity.id)
+    
+    # Optionally add agents as nodes
+    if include_agents:
+        agents = db.list_agents()
+        for agent in agents:
+            nodes.append({
+                "id": agent.id,
+                "name": agent.name,
+                "type": "agent",
+                "group": "agent",
+                "platform": agent.platform,
+                "is_active": agent.is_active
+            })
+            node_ids.add(agent.id)
+    
+    # Add relationships as links
+    relationships = db.list_relationships(limit=limit * 2)
+    for rel in relationships:
+        # Only include links where both nodes exist
+        if rel.source_entity_id in node_ids and rel.target_entity_id in node_ids:
+            links.append({
+                "id": rel.id,
+                "source": rel.source_entity_id,
+                "target": rel.target_entity_id,
+                "type": rel.type.value,
+                "metadata": rel.metadata
+            })
+    
+    return {
+        "nodes": nodes,
+        "links": links,
+        "stats": {
+            "node_count": len(nodes),
+            "link_count": len(links),
+            "entity_count": len(entities),
+            "agent_count": len(db.list_agents()) if include_agents else 0
+        }
+    }
 
 
 # ==================== Dashboard ====================

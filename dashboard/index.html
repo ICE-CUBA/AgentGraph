@@ -6,10 +6,52 @@
     <title>AgentGraph Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         [v-cloak] { display: none; }
         .event-card { transition: all 0.2s; }
         .event-card:hover { transform: translateX(4px); }
+        
+        /* Graph styles */
+        .graph-container {
+            width: 100%;
+            height: 600px;
+            background: #1a1a2e;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        .graph-container svg {
+            width: 100%;
+            height: 100%;
+        }
+        .node-label {
+            font-size: 11px;
+            fill: #e2e8f0;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .link {
+            stroke-opacity: 0.6;
+        }
+        .link:hover {
+            stroke-opacity: 1;
+            stroke-width: 3px !important;
+        }
+        .node:hover {
+            cursor: pointer;
+        }
+        .tooltip {
+            position: absolute;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            max-width: 300px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
@@ -33,110 +75,238 @@
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto px-6 py-8">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="text-gray-400 text-sm mb-1">Total Agents</div>
-                    <div class="text-3xl font-bold">{{ agents.length }}</div>
+        <!-- Tab Navigation -->
+        <div class="max-w-7xl mx-auto px-6 pt-6">
+            <div class="flex gap-2 border-b border-gray-700 pb-2">
+                <button 
+                    @click="activeTab = 'events'" 
+                    :class="activeTab === 'events' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'"
+                    class="px-4 py-2 rounded-t-lg font-medium text-sm transition">
+                    📊 Events
+                </button>
+                <button 
+                    @click="activeTab = 'graph'; $nextTick(() => initGraph())" 
+                    :class="activeTab === 'graph' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'"
+                    class="px-4 py-2 rounded-t-lg font-medium text-sm transition">
+                    🕸️ Graph
+                </button>
+            </div>
+        </div>
+
+        <main class="max-w-7xl mx-auto px-6 py-6">
+            <!-- Events Tab -->
+            <div v-if="activeTab === 'events'">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div class="text-gray-400 text-sm mb-1">Total Agents</div>
+                        <div class="text-3xl font-bold">{{ agents.length }}</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div class="text-gray-400 text-sm mb-1">Total Events</div>
+                        <div class="text-3xl font-bold">{{ events.length }}</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div class="text-gray-400 text-sm mb-1">Success Rate</div>
+                        <div class="text-3xl font-bold text-green-400">{{ successRate }}%</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div class="text-gray-400 text-sm mb-1">Active Sessions</div>
+                        <div class="text-3xl font-bold">{{ activeSessions }}</div>
+                    </div>
                 </div>
-                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="text-gray-400 text-sm mb-1">Total Events</div>
-                    <div class="text-3xl font-bold">{{ events.length }}</div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="text-gray-400 text-sm mb-1">Success Rate</div>
-                    <div class="text-3xl font-bold text-green-400">{{ successRate }}%</div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div class="text-gray-400 text-sm mb-1">Active Sessions</div>
-                    <div class="text-3xl font-bold">{{ activeSessions }}</div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Agents List -->
+                    <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                            <h2 class="font-semibold">Agents</h2>
+                            <button @click="showRegisterModal = true" class="text-blue-400 hover:text-blue-300 text-sm">
+                                + Register
+                            </button>
+                        </div>
+                        <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+                            <div v-if="agents.length === 0" class="p-6 text-gray-500 text-center">
+                                No agents registered
+                            </div>
+                            <div v-for="agent in agents" :key="agent.id" 
+                                 @click="selectAgent(agent)"
+                                 class="px-6 py-4 hover:bg-gray-750 cursor-pointer"
+                                 :class="{ 'bg-gray-750': selectedAgent?.id === agent.id }">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium">{{ agent.name }}</div>
+                                        <div class="text-sm text-gray-400">{{ agent.platform || 'custom' }}</div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full" 
+                                              :class="agent.is_active ? 'bg-green-400' : 'bg-gray-500'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Events Feed -->
+                    <div class="lg:col-span-2 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                            <h2 class="font-semibold">
+                                Events
+                                <span v-if="selectedAgent" class="text-gray-400 font-normal">
+                                    — {{ selectedAgent.name }}
+                                </span>
+                            </h2>
+                            <select v-model="eventFilter" class="bg-gray-700 border-gray-600 rounded px-3 py-1 text-sm">
+                                <option value="">All Types</option>
+                                <option value="action.complete">Actions</option>
+                                <option value="tool.call">Tool Calls</option>
+                                <option value="decision">Decisions</option>
+                                <option value="action.error">Errors</option>
+                            </select>
+                        </div>
+                        <div class="divide-y divide-gray-700 max-h-[600px] overflow-y-auto">
+                            <div v-if="filteredEvents.length === 0" class="p-6 text-gray-500 text-center">
+                                No events found
+                            </div>
+                            <div v-for="event in filteredEvents" :key="event.id" 
+                                 class="event-card px-6 py-4 hover:bg-gray-750">
+                                <div class="flex items-start gap-4">
+                                    <div class="mt-1">
+                                        <span class="text-xl">{{ getEventIcon(event.type) }}</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="font-medium">{{ event.action || event.type }}</span>
+                                            <span class="px-2 py-0.5 text-xs rounded-full"
+                                                  :class="getStatusClass(event.status)">
+                                                {{ event.status }}
+                                            </span>
+                                            <span v-if="event.duration_ms" class="text-xs text-gray-500">
+                                                {{ event.duration_ms }}ms
+                                            </span>
+                                        </div>
+                                        <div v-if="event.description" class="text-sm text-gray-400 mb-2">
+                                            {{ event.description }}
+                                        </div>
+                                        <div v-if="event.input_data" class="text-xs bg-gray-900 rounded p-2 mb-2 font-mono overflow-x-auto">
+                                            {{ JSON.stringify(event.input_data, null, 2) }}
+                                        </div>
+                                        <div v-if="event.error_message" class="text-xs text-red-400">
+                                            ⚠️ {{ event.error_message }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-2">
+                                            {{ formatTime(event.timestamp) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Agents List -->
-                <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-                        <h2 class="font-semibold">Agents</h2>
-                        <button @click="showRegisterModal = true" class="text-blue-400 hover:text-blue-300 text-sm">
-                            + Register
-                        </button>
-                    </div>
-                    <div class="divide-y divide-gray-700 max-h-96 overflow-y-auto">
-                        <div v-if="agents.length === 0" class="p-6 text-gray-500 text-center">
-                            No agents registered
-                        </div>
-                        <div v-for="agent in agents" :key="agent.id" 
-                             @click="selectAgent(agent)"
-                             class="px-6 py-4 hover:bg-gray-750 cursor-pointer"
-                             :class="{ 'bg-gray-750': selectedAgent?.id === agent.id }">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-medium">{{ agent.name }}</div>
-                                    <div class="text-sm text-gray-400">{{ agent.platform || 'custom' }}</div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full" 
-                                          :class="agent.is_active ? 'bg-green-400' : 'bg-gray-500'"></span>
-                                </div>
+            <!-- Graph Tab -->
+            <div v-if="activeTab === 'graph'">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Graph Controls -->
+                    <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+                        <h3 class="font-semibold mb-4">🎛️ Controls</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Link Force</label>
+                                <input type="range" v-model="graphSettings.linkDistance" min="50" max="300" 
+                                       @input="updateSimulation"
+                                       class="w-full">
+                                <span class="text-xs text-gray-500">{{ graphSettings.linkDistance }}px</span>
                             </div>
+                            
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Repulsion</label>
+                                <input type="range" v-model="graphSettings.charge" min="-500" max="-50"
+                                       @input="updateSimulation"
+                                       class="w-full">
+                                <span class="text-xs text-gray-500">{{ graphSettings.charge }}</span>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" v-model="graphSettings.showLabels" id="showLabels"
+                                       @change="toggleLabels"
+                                       class="rounded bg-gray-700">
+                                <label for="showLabels" class="text-sm">Show Labels</label>
+                            </div>
+                            
+                            <button @click="resetGraph" 
+                                    class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm">
+                                🔄 Reset View
+                            </button>
+                        </div>
+
+                        <hr class="border-gray-700 my-4">
+                        
+                        <h4 class="font-medium mb-3">Legend</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                                <span>Agent</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                <span>User</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                                <span>Task</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                <span>Tool</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-pink-500"></span>
+                                <span>Document</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-gray-500"></span>
+                                <span>Other</span>
+                            </div>
+                        </div>
+
+                        <hr class="border-gray-700 my-4">
+                        
+                        <div class="text-sm text-gray-400">
+                            <div>Nodes: {{ graphStats.node_count || 0 }}</div>
+                            <div>Links: {{ graphStats.link_count || 0 }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Graph Visualization -->
+                    <div class="lg:col-span-3">
+                        <div class="graph-container border border-gray-700" id="graph-container">
+                            <svg id="graph-svg"></svg>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-500 text-center">
+                            Drag nodes to rearrange • Scroll to zoom • Click node for details
                         </div>
                     </div>
                 </div>
-
-                <!-- Events Feed -->
-                <div class="lg:col-span-2 bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-                        <h2 class="font-semibold">
-                            Events
-                            <span v-if="selectedAgent" class="text-gray-400 font-normal">
-                                — {{ selectedAgent.name }}
-                            </span>
-                        </h2>
-                        <select v-model="eventFilter" class="bg-gray-700 border-gray-600 rounded px-3 py-1 text-sm">
-                            <option value="">All Types</option>
-                            <option value="action.complete">Actions</option>
-                            <option value="tool.call">Tool Calls</option>
-                            <option value="decision">Decisions</option>
-                            <option value="action.error">Errors</option>
-                        </select>
+                
+                <!-- Node Details Panel -->
+                <div v-if="selectedNode" 
+                     class="fixed bottom-6 right-6 bg-gray-800 border border-gray-700 rounded-xl p-6 w-80 shadow-2xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-semibold">{{ selectedNode.name }}</h3>
+                        <button @click="selectedNode = null" class="text-gray-400 hover:text-white">✕</button>
                     </div>
-                    <div class="divide-y divide-gray-700 max-h-[600px] overflow-y-auto">
-                        <div v-if="filteredEvents.length === 0" class="p-6 text-gray-500 text-center">
-                            No events found
+                    <div class="space-y-2 text-sm">
+                        <div><span class="text-gray-400">Type:</span> {{ selectedNode.type }}</div>
+                        <div><span class="text-gray-400">ID:</span> {{ selectedNode.id.slice(0, 12) }}...</div>
+                        <div v-if="selectedNode.platform">
+                            <span class="text-gray-400">Platform:</span> {{ selectedNode.platform }}
                         </div>
-                        <div v-for="event in filteredEvents" :key="event.id" 
-                             class="event-card px-6 py-4 hover:bg-gray-750">
-                            <div class="flex items-start gap-4">
-                                <div class="mt-1">
-                                    <span class="text-xl">{{ getEventIcon(event.type) }}</span>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-medium">{{ event.action || event.type }}</span>
-                                        <span class="px-2 py-0.5 text-xs rounded-full"
-                                              :class="getStatusClass(event.status)">
-                                            {{ event.status }}
-                                        </span>
-                                        <span v-if="event.duration_ms" class="text-xs text-gray-500">
-                                            {{ event.duration_ms }}ms
-                                        </span>
-                                    </div>
-                                    <div v-if="event.description" class="text-sm text-gray-400 mb-2">
-                                        {{ event.description }}
-                                    </div>
-                                    <div v-if="event.input_data" class="text-xs bg-gray-900 rounded p-2 mb-2 font-mono overflow-x-auto">
-                                        {{ JSON.stringify(event.input_data, null, 2) }}
-                                    </div>
-                                    <div v-if="event.error_message" class="text-xs text-red-400">
-                                        ⚠️ {{ event.error_message }}
-                                    </div>
-                                    <div class="text-xs text-gray-500 mt-2">
-                                        {{ formatTime(event.timestamp) }}
-                                    </div>
-                                </div>
-                            </div>
+                        <div v-if="selectedNode.metadata && Object.keys(selectedNode.metadata).length">
+                            <span class="text-gray-400">Metadata:</span>
+                            <pre class="mt-1 text-xs bg-gray-900 rounded p-2 overflow-auto max-h-32">{{ JSON.stringify(selectedNode.metadata, null, 2) }}</pre>
                         </div>
                     </div>
                 </div>
@@ -181,12 +351,42 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tooltip (for graph hover) -->
+        <div id="tooltip" class="tooltip" style="display: none;"></div>
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
         
         const API_BASE = window.location.origin;
+        
+        // Color scheme for node types
+        const nodeColors = {
+            agent: '#3b82f6',    // blue
+            user: '#22c55e',     // green
+            task: '#a855f7',     // purple
+            tool: '#eab308',     // yellow
+            document: '#ec4899', // pink
+            resource: '#f97316', // orange
+            message: '#06b6d4',  // cyan
+            session: '#6366f1',  // indigo
+            custom: '#6b7280'    // gray
+        };
+        
+        // Link colors by relationship type
+        const linkColors = {
+            created: '#22c55e',
+            modified: '#eab308',
+            referenced: '#3b82f6',
+            depends_on: '#f97316',
+            caused: '#ef4444',
+            responded_to: '#8b5cf6',
+            part_of: '#ec4899',
+            owns: '#14b8a6',
+            delegated_to: '#f59e0b',
+            collaborated_with: '#6366f1'
+        };
         
         createApp({
             setup() {
@@ -197,6 +397,20 @@
                 const showRegisterModal = ref(false);
                 const newAgent = ref({ name: '', platform: 'custom' });
                 const registeredApiKey = ref('');
+                const activeTab = ref('events');
+                const graphData = ref({ nodes: [], links: [] });
+                const graphStats = ref({});
+                const selectedNode = ref(null);
+                
+                const graphSettings = ref({
+                    linkDistance: 120,
+                    charge: -200,
+                    showLabels: true
+                });
+                
+                let simulation = null;
+                let svg = null;
+                let g = null;
                 
                 const successRate = computed(() => {
                     if (events.value.length === 0) return 100;
@@ -238,9 +452,23 @@
                     }
                 };
                 
+                const fetchGraphData = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/graph/data`);
+                        const data = await res.json();
+                        graphData.value = data;
+                        graphStats.value = data.stats || {};
+                    } catch (e) {
+                        console.error('Failed to fetch graph data:', e);
+                    }
+                };
+                
                 const refresh = () => {
                     fetchAgents();
                     fetchEvents();
+                    if (activeTab.value === 'graph') {
+                        fetchGraphData().then(() => initGraph());
+                    }
                 };
                 
                 const selectAgent = (agent) => {
@@ -293,6 +521,190 @@
                     return new Date(timestamp).toLocaleString();
                 };
                 
+                // ==================== D3 Graph Functions ====================
+                
+                const initGraph = async () => {
+                    await fetchGraphData();
+                    
+                    const container = document.getElementById('graph-container');
+                    if (!container) return;
+                    
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    
+                    // Clear previous graph
+                    d3.select('#graph-svg').selectAll('*').remove();
+                    
+                    svg = d3.select('#graph-svg')
+                        .attr('width', width)
+                        .attr('height', height);
+                    
+                    // Add zoom behavior
+                    const zoom = d3.zoom()
+                        .scaleExtent([0.1, 4])
+                        .on('zoom', (event) => {
+                            g.attr('transform', event.transform);
+                        });
+                    
+                    svg.call(zoom);
+                    
+                    // Create container group
+                    g = svg.append('g');
+                    
+                    // Arrow markers for directed edges
+                    svg.append('defs').selectAll('marker')
+                        .data(['arrow'])
+                        .join('marker')
+                        .attr('id', 'arrow')
+                        .attr('viewBox', '0 -5 10 10')
+                        .attr('refX', 20)
+                        .attr('refY', 0)
+                        .attr('markerWidth', 6)
+                        .attr('markerHeight', 6)
+                        .attr('orient', 'auto')
+                        .append('path')
+                        .attr('fill', '#666')
+                        .attr('d', 'M0,-5L10,0L0,5');
+                    
+                    // Create deep copies to avoid D3 mutation issues
+                    const nodes = graphData.value.nodes.map(d => ({...d}));
+                    const links = graphData.value.links.map(d => ({...d}));
+                    
+                    if (nodes.length === 0) {
+                        g.append('text')
+                            .attr('x', width / 2)
+                            .attr('y', height / 2)
+                            .attr('text-anchor', 'middle')
+                            .attr('fill', '#6b7280')
+                            .text('No entities yet. Create some via the API!');
+                        return;
+                    }
+                    
+                    // Create simulation
+                    simulation = d3.forceSimulation(nodes)
+                        .force('link', d3.forceLink(links).id(d => d.id).distance(graphSettings.value.linkDistance))
+                        .force('charge', d3.forceManyBody().strength(graphSettings.value.charge))
+                        .force('center', d3.forceCenter(width / 2, height / 2))
+                        .force('collision', d3.forceCollide().radius(30));
+                    
+                    // Draw links
+                    const link = g.append('g')
+                        .selectAll('line')
+                        .data(links)
+                        .join('line')
+                        .attr('class', 'link')
+                        .attr('stroke', d => linkColors[d.type] || '#666')
+                        .attr('stroke-width', 1.5)
+                        .attr('marker-end', 'url(#arrow)');
+                    
+                    // Draw nodes
+                    const node = g.append('g')
+                        .selectAll('circle')
+                        .data(nodes)
+                        .join('circle')
+                        .attr('class', 'node')
+                        .attr('r', d => d.type === 'agent' ? 12 : 8)
+                        .attr('fill', d => nodeColors[d.type] || nodeColors.custom)
+                        .attr('stroke', '#fff')
+                        .attr('stroke-width', 2)
+                        .call(drag(simulation))
+                        .on('click', (event, d) => {
+                            selectedNode.value = d;
+                        })
+                        .on('mouseover', (event, d) => {
+                            showTooltip(event, d);
+                        })
+                        .on('mouseout', hideTooltip);
+                    
+                    // Draw labels
+                    const labels = g.append('g')
+                        .attr('class', 'labels')
+                        .selectAll('text')
+                        .data(nodes)
+                        .join('text')
+                        .attr('class', 'node-label')
+                        .attr('dy', d => d.type === 'agent' ? 24 : 20)
+                        .attr('text-anchor', 'middle')
+                        .text(d => d.name || d.id.slice(0, 8))
+                        .style('display', graphSettings.value.showLabels ? 'block' : 'none');
+                    
+                    // Update positions on tick
+                    simulation.on('tick', () => {
+                        link
+                            .attr('x1', d => d.source.x)
+                            .attr('y1', d => d.source.y)
+                            .attr('x2', d => d.target.x)
+                            .attr('y2', d => d.target.y);
+                        
+                        node
+                            .attr('cx', d => d.x)
+                            .attr('cy', d => d.y);
+                        
+                        labels
+                            .attr('x', d => d.x)
+                            .attr('y', d => d.y);
+                    });
+                };
+                
+                const drag = (simulation) => {
+                    function dragstarted(event) {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        event.subject.fx = event.subject.x;
+                        event.subject.fy = event.subject.y;
+                    }
+                    
+                    function dragged(event) {
+                        event.subject.fx = event.x;
+                        event.subject.fy = event.y;
+                    }
+                    
+                    function dragended(event) {
+                        if (!event.active) simulation.alphaTarget(0);
+                        event.subject.fx = null;
+                        event.subject.fy = null;
+                    }
+                    
+                    return d3.drag()
+                        .on('start', dragstarted)
+                        .on('drag', dragged)
+                        .on('end', dragended);
+                };
+                
+                const showTooltip = (event, d) => {
+                    const tooltip = document.getElementById('tooltip');
+                    tooltip.innerHTML = `
+                        <div class="font-semibold mb-1">${d.name || d.id}</div>
+                        <div class="text-gray-400">Type: ${d.type}</div>
+                        ${d.platform ? `<div class="text-gray-400">Platform: ${d.platform}</div>` : ''}
+                    `;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (event.pageX + 10) + 'px';
+                    tooltip.style.top = (event.pageY + 10) + 'px';
+                };
+                
+                const hideTooltip = () => {
+                    document.getElementById('tooltip').style.display = 'none';
+                };
+                
+                const updateSimulation = () => {
+                    if (!simulation) return;
+                    simulation
+                        .force('link').distance(parseInt(graphSettings.value.linkDistance));
+                    simulation
+                        .force('charge').strength(parseInt(graphSettings.value.charge));
+                    simulation.alpha(0.5).restart();
+                };
+                
+                const toggleLabels = () => {
+                    if (!g) return;
+                    g.selectAll('.node-label')
+                        .style('display', graphSettings.value.showLabels ? 'block' : 'none');
+                };
+                
+                const resetGraph = () => {
+                    initGraph();
+                };
+                
                 onMounted(() => {
                     refresh();
                     // Auto-refresh every 10 seconds
@@ -310,12 +722,21 @@
                     successRate,
                     activeSessions,
                     filteredEvents,
+                    activeTab,
+                    graphData,
+                    graphStats,
+                    graphSettings,
+                    selectedNode,
                     refresh,
                     selectAgent,
                     registerAgent,
                     getEventIcon,
                     getStatusClass,
-                    formatTime
+                    formatTime,
+                    initGraph,
+                    updateSimulation,
+                    toggleLabels,
+                    resetGraph
                 };
             }
         }).mount('#app');
