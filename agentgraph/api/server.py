@@ -1,15 +1,17 @@
 """
 AgentGraph API Server
 
-FastAPI-based REST API for agent activity tracking.
+FastAPI-based REST API for agent activity tracking with WebSocket support.
 """
 
+import asyncio
+import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -22,8 +24,53 @@ from ..storage.database import Database
 app = FastAPI(
     title="AgentGraph API",
     description="Track and visualize AI agent activities",
-    version="0.1.0"
+    version="0.2.0"
 )
+
+
+# ==================== WebSocket Connection Manager ====================
+
+class ConnectionManager:
+    """Manages WebSocket connections for real-time event streaming."""
+    
+    def __init__(self):
+        self.active_connections: Set[WebSocket] = set()
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.add(websocket)
+    
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.discard(websocket)
+    
+    async def broadcast(self, message: dict):
+        """Broadcast message to all connected clients."""
+        if not self.active_connections:
+            return
+        
+        message_str = json.dumps(message, default=str)
+        disconnected = set()
+        
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message_str)
+            except Exception:
+                disconnected.add(connection)
+        
+        # Clean up disconnected clients
+        self.active_connections -= disconnected
+    
+    async def broadcast_event(self, event_type: str, data: dict):
+        """Broadcast a typed event."""
+        await self.broadcast({
+            "type": event_type,
+            "data": data,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+
+# Global connection manager
+manager = ConnectionManager()
 
 # CORS middleware
 app.add_middleware(
@@ -129,7 +176,49 @@ async def get_agent_from_api_key(x_api_key: str = Header(...)) -> Agent:
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.2.0", "websocket": "/ws"}
+
+
+# ==================== WebSocket Endpoint ====================
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time event streaming.
+    
+    Connect to receive live events as they happen.
+    Messages are JSON with format: {"type": "event_type", "data": {...}, "timestamp": "..."}
+    """
+    await manager.connect(websocket)
+    try:
+        # Send welcome message
+        await websocket.send_json({
+            "type": "connected",
+            "data": {"message": "Connected to AgentGraph real-time stream"},
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
+        # Keep connection alive and handle any incoming messages
+        while True:
+            try:
+                # Wait for any message (can be used for ping/pong or future commands)
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                
+                # Handle ping
+                if data == "ping":
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
+                    
+            except asyncio.TimeoutError:
+                # Send heartbeat
+                try:
+                    await websocket.send_json({"type": "heartbeat", "timestamp": datetime.utcnow().isoformat()})
+                except Exception:
+                    break
+                    
+    except WebSocketDisconnect:
+        pass
+    finally:
+        manager.disconnect(websocket)
 
 
 # ==================== Agent Endpoints ====================
@@ -223,7 +312,8 @@ async def create_event(
         duration_ms=event_data.duration_ms
     )
     db.create_event(event)
-    return EventResponse(
+    
+    response = EventResponse(
         id=event.id,
         type=event.type.value,
         agent_id=event.agent_id,
@@ -242,6 +332,14 @@ async def create_event(
         timestamp=event.timestamp.isoformat(),
         duration_ms=event.duration_ms
     )
+    
+    # Broadcast to WebSocket clients
+    await manager.broadcast_event("new_event", {
+        **response.model_dump(),
+        "agent_name": agent.name
+    })
+    
+    return response
 
 
 @app.post("/events/batch")

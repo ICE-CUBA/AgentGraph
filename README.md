@@ -4,6 +4,8 @@
 
 Track, visualize, and share context between AI agents. Know what your agents are doing and help them collaborate.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## 🎯 The Problem
 
 AI agents today are isolated. They work, but:
@@ -17,7 +19,8 @@ AI agents today are isolated. They work, but:
 AgentGraph provides:
 - **Activity Tracking** — Log everything agents do
 - **Memory Graph** — Entities, relationships, and events
-- **Owner Dashboard** — See what's happening
+- **Owner Dashboard** — See what's happening in real-time
+- **Graph Visualization** — Interactive D3.js entity relationship graphs
 - **Agent Queries** — Agents can ask "what happened?"
 - **Cross-Agent Context** — Share knowledge between agents
 
@@ -32,17 +35,23 @@ python -m agentgraph.api.server
 
 Server runs at `http://localhost:8080`
 
-### 2. Register an Agent
+### 2. Open the Dashboard
+
+Navigate to `http://localhost:8080` in your browser:
+- **📊 Events Tab** — Real-time activity feed
+- **🕸️ Graph Tab** — Interactive entity relationship visualization
+
+### 3. Register an Agent
 
 ```bash
 curl -X POST http://localhost:8080/agents \
   -H "Content-Type: application/json" \
-  -d '{"name": "MyAgent", "platform": "custom"}'
+  -d '{"name": "MyAgent", "platform": "langchain"}'
 ```
 
 Save the `api_key` from the response.
 
-### 3. Use the SDK
+### 4. Use the SDK
 
 ```python
 from agentgraph import AgentGraphClient
@@ -53,6 +62,11 @@ client = AgentGraphClient(api_key="your-api-key")
 # Log events
 client.log("tool.call", action="search", input_data={"query": "AI news"})
 client.log("decision", action="summarize", description="User wants a summary")
+
+# Create entities and relationships
+user_id = client.create_entity("user", "Alice", {"role": "admin"})
+task_id = client.create_entity("task", "Data Analysis", {"priority": "high"})
+client.create_relationship(user_id, task_id, "owns")
 
 # Use decorator for automatic tracking
 @client.track()
@@ -65,6 +79,14 @@ with client.track_context("complex_operation"):
     step2()
     step3()
 ```
+
+### 5. Run the Demo
+
+```bash
+python demo.py
+```
+
+Creates sample agents, entities, relationships, and events to explore.
 
 ## 📊 Event Types
 
@@ -82,6 +104,34 @@ with client.track_context("complex_operation"):
 | `memory.store` | Stored in memory |
 | `memory.retrieve` | Retrieved from memory |
 | `state.change` | State changed |
+
+## 🔗 Entity & Relationship Types
+
+### Entities
+| Type | Description |
+|------|-------------|
+| `agent` | AI agent |
+| `user` | Human user |
+| `task` | Task or job |
+| `tool` | Tool or function |
+| `document` | Document or file |
+| `resource` | External resource |
+| `session` | Conversation session |
+| `custom` | Custom entity type |
+
+### Relationships
+| Type | Description |
+|------|-------------|
+| `created` | A created B |
+| `modified` | A modified B |
+| `referenced` | A referenced B |
+| `depends_on` | A depends on B |
+| `caused` | A caused B |
+| `responded_to` | A responded to B |
+| `part_of` | A is part of B |
+| `owns` | A owns B |
+| `delegated_to` | A delegated to B |
+| `collaborated_with` | A collaborated with B |
 
 ## 🔌 Integrations
 
@@ -101,13 +151,13 @@ llm = ChatOpenAI(callbacks=[callback])
 ### OpenAI Assistants
 
 ```python
-# Coming soon
+# Coming soon - Run/Step API integration
 ```
 
 ### CrewAI
 
 ```python
-# Coming soon
+# Coming soon - Event hooks integration
 ```
 
 ## 📈 API Endpoints
@@ -129,8 +179,20 @@ llm = ChatOpenAI(callbacks=[callback])
 - `GET /sessions/{id}` — Get session
 - `GET /sessions/{id}/events` — Get session events
 
-### Graph
+### Entities
+- `POST /entities` — Create entity
+- `GET /entities/{id}` — Get entity details
+- `GET /entities/{id}/relationships` — Get entity relationships
+
+### Relationships
+- `POST /relationships` — Create relationship
+
+### Graph & Visualization
+- `GET /graph/data` — Get nodes + links for D3.js visualization
 - `GET /graph/timeline` — Get activity timeline
+
+### Health
+- `GET /health` — Health check
 
 ## 🗄️ Data Model
 
@@ -154,17 +216,53 @@ llm = ChatOpenAI(callbacks=[callback])
 
 ## 🛣️ Roadmap
 
-- [x] Core schema & storage
-- [x] REST API
-- [x] Python SDK
+### Phase 1: Passive Logging (✅ Complete)
+- [x] Core schema & storage (SQLite)
+- [x] REST API with authentication
+- [x] Python SDK with decorators
 - [x] LangChain integration
-- [ ] Dashboard UI
+- [x] Dashboard UI (Vue.js + Tailwind)
+- [x] D3.js graph visualization
+- [x] Entity & relationship CRUD
+
+### Phase 2: Agent Queries (🚧 In Progress)
 - [ ] Real-time WebSocket updates
-- [ ] Agent-to-agent queries
+- [ ] Agent query interface ("what happened to X?")
+- [ ] Semantic search over events
 - [ ] OpenAI Assistants integration
 - [ ] CrewAI integration
-- [ ] Graph visualization
+
+### Phase 3: Active Sharing
+- [ ] Cross-agent context protocol
+- [ ] Bi-directional event streaming
+- [ ] Conflict detection & alerts
+- [ ] Multi-tenant support
+
+### Phase 4: Cloud Platform
 - [ ] Hosted cloud version
+- [ ] User authentication
+- [ ] Team workspaces
+- [ ] Usage analytics
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    AgentGraph                           │
+├─────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   SDK       │  │   REST API  │  │  Dashboard  │     │
+│  │  (Python)   │  │  (FastAPI)  │  │  (Vue.js)   │     │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
+│         │                │                │             │
+│         └────────────────┼────────────────┘             │
+│                          │                              │
+│                   ┌──────▼──────┐                       │
+│                   │   Storage   │                       │
+│                   │  (SQLite)   │                       │
+│                   └─────────────┘                       │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## 📄 License
 
