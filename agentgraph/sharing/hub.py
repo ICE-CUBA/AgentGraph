@@ -173,8 +173,8 @@ class SharingHub:
         if event.source_agent_id in self.connected_agents:
             self.connected_agents[event.source_agent_id].events_sent += 1
         
-        # Check for conflicts
-        if event.entity_id:
+        # Check for conflicts (but not on conflict events themselves to avoid recursion)
+        if event.entity_id and event.topic != Topic.CONFLICT:
             conflict = self._check_conflict(event)
             if conflict:
                 await self._handle_conflict(event, conflict)
