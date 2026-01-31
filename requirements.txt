@@ -2,9 +2,11 @@
 fastapi>=0.109.0
 uvicorn>=0.27.0
 pydantic>=2.5.0
+websockets>=12.0
 
 # SDK
 requests>=2.31.0
 
-# Optional: LangChain integration
-# langchain>=0.1.0
+# Optional integrations (uncomment as needed)
+# openai>=1.12.0  # For OpenAI Assistants integration
+# langchain>=0.1.0  # For LangChain integration

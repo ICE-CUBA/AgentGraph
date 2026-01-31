@@ -151,7 +151,48 @@ llm = ChatOpenAI(callbacks=[callback])
 ### OpenAI Assistants
 
 ```python
-# Coming soon - Run/Step API integration
+from openai import OpenAI
+from agentgraph import OpenAIAssistantsTracker
+
+# Initialize
+client = OpenAI()
+tracker = OpenAIAssistantsTracker(agentgraph_api_key="...")
+
+# Wrap the client - all runs are now tracked!
+client = tracker.wrap(client)
+
+# Use normally
+run = client.beta.threads.runs.create_and_poll(
+    thread_id="thread_...",
+    assistant_id="asst_..."
+)
+# Run steps, tool calls, and messages are automatically logged!
+```
+
+Or use the decorator:
+```python
+from agentgraph import track_assistant_run
+
+@track_assistant_run(api_key="...")
+def my_assistant_task():
+    client = OpenAI()
+    # ... your assistant logic ...
+    return result
+```
+
+For streaming:
+```python
+from agentgraph import AssistantEventHandler
+
+handler = AssistantEventHandler(agentgraph_api_key="...")
+
+with client.beta.threads.runs.stream(
+    thread_id="...",
+    assistant_id="...",
+    event_handler=handler
+) as stream:
+    for text in stream.text_deltas:
+        print(text, end="", flush=True)
 ```
 
 ### CrewAI
@@ -225,12 +266,13 @@ llm = ChatOpenAI(callbacks=[callback])
 - [x] D3.js graph visualization
 - [x] Entity & relationship CRUD
 
-### Phase 2: Agent Queries (🚧 In Progress)
-- [ ] Real-time WebSocket updates
-- [ ] Agent query interface ("what happened to X?")
-- [ ] Semantic search over events
-- [ ] OpenAI Assistants integration
+### Phase 2: Agent Queries (✅ Complete)
+- [x] Real-time WebSocket updates
+- [x] Agent query interface ("what happened to X?")
+- [x] Search over events and entities
+- [x] OpenAI Assistants integration
 - [ ] CrewAI integration
+- [ ] Semantic/vector search
 
 ### Phase 3: Active Sharing
 - [ ] Cross-agent context protocol
