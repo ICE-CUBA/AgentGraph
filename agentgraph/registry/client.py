@@ -132,7 +132,7 @@ def get_agent(agent_id: str) -> Optional[Agent]:
     return _get_registry().get(agent_id)
 
 
-def update_status(agent_id: str, status: str | AgentStatus) -> bool:
+def update_status(agent_id: str, status: Union[str, AgentStatus]) -> bool:
     """
     Update an agent's status.
     

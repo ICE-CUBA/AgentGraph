@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class TaskOutcome(str, Enum):
@@ -426,7 +426,7 @@ def record_task(agent_id: str, task_type: str, **kwargs) -> str:
     return get_reputation_tracker().record_task_start(agent_id, task_type, **kwargs)
 
 
-def complete_task(task_id: str, outcome: str | TaskOutcome, **kwargs) -> bool:
+def complete_task(task_id: str, outcome: Union[str, TaskOutcome], **kwargs) -> bool:
     """Record task completion."""
     if isinstance(outcome, str):
         outcome = TaskOutcome(outcome)
