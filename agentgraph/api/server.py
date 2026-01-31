@@ -19,6 +19,14 @@ from pydantic import BaseModel, Field
 from ..core.schema import Agent, Entity, Event, EventType, EntityType, Relationship, RelationType, Session
 from ..storage.database import Database
 
+# Optional: Semantic search
+try:
+    from ..search.semantic import get_search_engine
+    HAS_SEMANTIC_SEARCH = True
+except ImportError:
+    HAS_SEMANTIC_SEARCH = False
+    get_search_engine = None
+
 # Initialize FastAPI app
 app = FastAPI(
     title="AgentGraph API",
@@ -604,6 +612,88 @@ async def get_entity_history(entity_id: str, limit: int = 100):
         "entity": entity.to_dict(),
         "events": [e.to_dict() for e in events],
         "count": len(events)
+    }
+
+
+# ==================== Semantic Search Endpoints ====================
+
+@app.get("/search/semantic")
+async def semantic_search(
+    q: str,
+    doc_type: str = "event",
+    limit: int = 10,
+    threshold: float = 0.3
+):
+    """
+    Semantic search using embeddings.
+    
+    Uses sentence transformers for intelligent matching.
+    Falls back to TF-IDF if transformers not available.
+    
+    Args:
+        q: Search query (natural language)
+        doc_type: "event" or "entity"
+        limit: Max results
+        threshold: Minimum similarity score (0-1)
+    """
+    if not HAS_SEMANTIC_SEARCH:
+        raise HTTPException(
+            status_code=501, 
+            detail="Semantic search not available. Install: pip install sentence-transformers"
+        )
+    
+    search_engine = get_search_engine()
+    
+    # Index documents
+    if doc_type == "event":
+        documents = [e.to_dict() for e in db.list_events(limit=500)]
+    else:
+        documents = [e.to_dict() for e in db.list_entities(limit=500)]
+    
+    search_engine.index_documents(documents, doc_type=doc_type)
+    
+    # Search
+    results = search_engine.search(q, top_k=limit, threshold=threshold)
+    
+    return {
+        "query": q,
+        "doc_type": doc_type,
+        "results": [
+            {"document": doc, "score": round(score, 3)}
+            for doc, score in results
+        ],
+        "count": len(results)
+    }
+
+
+@app.get("/search/similar/{event_id}")
+async def find_similar_events(event_id: str, limit: int = 5):
+    """Find events similar to a given event."""
+    if not HAS_SEMANTIC_SEARCH:
+        raise HTTPException(
+            status_code=501,
+            detail="Semantic search not available"
+        )
+    
+    event = db.get_event(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    search_engine = get_search_engine()
+    
+    # Index all events
+    documents = [e.to_dict() for e in db.list_events(limit=500)]
+    search_engine.index_documents(documents, doc_type="event")
+    
+    # Find similar
+    results = search_engine.find_similar(event.to_dict(), doc_type="event", top_k=limit)
+    
+    return {
+        "event": event.to_dict(),
+        "similar": [
+            {"document": doc, "score": round(score, 3)}
+            for doc, score in results
+        ]
     }
 
 
