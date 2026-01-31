@@ -258,6 +258,10 @@ Tracks:
 - `GET /graph/data` — Get nodes + links for D3.js visualization
 - `GET /graph/timeline` — Get activity timeline
 
+### Semantic Search
+- `GET /search/semantic?q=...` — Embedding-based intelligent search
+- `GET /search/similar/{event_id}` — Find similar events
+
 ### Health
 - `GET /health` — Health check
 
@@ -298,7 +302,7 @@ Tracks:
 - [x] Search over events and entities
 - [x] OpenAI Assistants integration
 - [x] CrewAI integration
-- [ ] Semantic/vector search (planned)
+- [x] Semantic/vector search with embeddings
 
 ### Phase 3: Active Sharing
 - [ ] Cross-agent context protocol
