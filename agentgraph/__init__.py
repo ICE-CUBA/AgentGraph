@@ -1,7 +1,20 @@
 """
-AgentGraph - Memory Layer for AI Agents
+AgentGraph - Infrastructure for Multi-Agent AI Systems
 
-Track, visualize, and share context between AI agents.
+The simplest way to get started:
+
+    from agentgraph import log, query
+    
+    log("searched for papers")
+    results = query("what did I do?")
+
+That's it. No server setup, no API keys, no config.
+Server starts automatically when needed.
+
+For more control, use the full SDK:
+
+    from agentgraph import AgentGraphClient
+    client = AgentGraphClient(api_key="...")
 """
 
 from .core.schema import (
@@ -16,6 +29,18 @@ from .core.schema import (
 )
 
 from .sdk.client import AgentGraphClient, LangChainCallback
+
+# Easy mode - zero config, just works
+from .easy import (
+    log,
+    query,
+    search,
+    connect,
+    share,
+    entity,
+    link,
+    track
+)
 
 # Import integrations (optional dependencies)
 try:
@@ -37,6 +62,15 @@ except ImportError:
 
 __version__ = "0.2.0"
 __all__ = [
+    # Easy mode (recommended for getting started)
+    "log",
+    "query", 
+    "search",
+    "connect",
+    "share",
+    "entity",
+    "link",
+    "track",
     # Core schema
     "Agent",
     "Entity",
@@ -46,7 +80,7 @@ __all__ = [
     "Relationship",
     "RelationType",
     "Session",
-    # SDK
+    # Full SDK (for more control)
     "AgentGraphClient",
     "LangChainCallback",
     # Integrations (when available)

@@ -44,42 +44,84 @@ But the future isn't single agents — it's **agent networks**:
 ## 📦 Installation
 
 ```bash
-# Python
 pip install agentgraph-ai
-
-# With all integrations
-pip install agentgraph-ai[all]
-
-# JavaScript/TypeScript  
-npm install agentgraph-ai
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start (30 seconds)
 
-### 1. Start the Server
+```python
+from agentgraph import log, query
 
-```bash
-pip install agentgraph-ai[server]
-python -m agentgraph.api.server
-# Server running at http://localhost:8080
+# Log what your agent does
+log("searched for AI papers")
+log("decided to use GPT-4", type="decision")
+
+# Ask questions
+result = query("what did I do?")
+print(result["answer"])
 ```
 
-### 2. Connect Your First Agent
+**That's it.** No server setup. No API keys. No config. It just works.
+
+The server starts automatically when you first call `log()` or `query()`.
+
+### Auto-track functions
+
+```python
+from agentgraph import track
+
+@track
+def my_agent_function(query):
+    # Your agent logic here
+    return process(query)
+
+my_agent_function("analyze this data")
+# Automatically logged with timing, inputs, outputs
+```
+
+### Build a knowledge graph
+
+```python
+from agentgraph import entity, link
+
+# Create entities
+customer = entity("Acme Corp", type="user", industry="tech")
+project = entity("Q1 Analysis", type="task", priority="high")
+
+# Connect them
+link(customer, project, type="owns")
+```
+
+## 🤝 Multi-Agent Mode
+
+```python
+from agentgraph import connect, share
+
+# Each agent connects with a name
+connect("ResearchAgent")
+
+# Share findings with other agents
+share("Found 3 key insights", topic="research", data={"insights": [...]})
+
+# Other agents receive this in real-time
+```
+
+## 💪 Full SDK (More Control)
+
+For production use with custom configuration:
 
 ```python
 from agentgraph import AgentGraphClient
 
-client = AgentGraphClient(api_key="your-key")
+client = AgentGraphClient(
+    api_key="your-key",
+    base_url="https://your-server.com"
+)
 
-# Log what the agent does
 client.log("tool.call", "web_search", {
     "inputData": {"query": "latest AI research"},
     "outputData": {"results": 10}
 })
-
-# Build knowledge
-doc_id = client.create_entity("document", "Research Report")
-client.create_relationship(agent_id, doc_id, "created")
 ```
 
 ### 3. Connect Multiple Agents
