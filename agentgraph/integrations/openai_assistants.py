@@ -30,8 +30,7 @@ Alternative usage with decorator:
 
 import functools
 import time
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional
 from dataclasses import dataclass
 
 try:

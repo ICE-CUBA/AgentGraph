@@ -23,13 +23,11 @@ Alternative - wrap individual agents:
 
 import functools
 import time
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
 try:
     from crewai import Agent, Task, Crew
-    from crewai.agents import CrewAgentExecutor
     HAS_CREWAI = True
 except ImportError:
     HAS_CREWAI = False
@@ -248,7 +246,7 @@ class CrewAITracker:
                 result = original_execute(*args, **kwargs)
                 duration = int((time.time() - start_time) * 1000)
                 
-                tracked_task = tracker._active_tasks.pop(task_id, None)
+                tracker._active_tasks.pop(task_id, None)  # Clean up
                 tracked_crew = tracker._active_crews.get(crew_id)
                 if tracked_crew:
                     tracked_crew.tasks_completed += 1

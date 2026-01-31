@@ -6,7 +6,6 @@ Simple SDK for logging agent activities to AgentGraph.
 
 import functools
 import time
-from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 from contextlib import contextmanager
 
