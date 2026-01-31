@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  agentgraph:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - agentgraph_data:/data
+    environment:
+      - AGENTGRAPH_DB_PATH=/data/agentgraph.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  agentgraph_data:
