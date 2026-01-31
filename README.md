@@ -198,8 +198,34 @@ with client.beta.threads.runs.stream(
 ### CrewAI
 
 ```python
-# Coming soon - Event hooks integration
+from crewai import Agent, Task, Crew
+from agentgraph import CrewAITracker
+
+# Initialize tracker
+tracker = CrewAITracker(agentgraph_api_key="...")
+
+# Define your crew
+researcher = Agent(role="Researcher", goal="Find information", ...)
+writer = Agent(role="Writer", goal="Write content", ...)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[...],
+)
+
+# Wrap the crew - all activities are now tracked!
+crew = tracker.wrap(crew)
+
+# Run normally
+result = crew.kickoff()
 ```
+
+Tracks:
+- Crew kickoff and completion
+- Individual task execution by each agent
+- Agent delegation between crew members
+- Tool usage
+- Task outputs and durations
 
 ## 📈 API Endpoints
 
@@ -271,8 +297,8 @@ with client.beta.threads.runs.stream(
 - [x] Agent query interface ("what happened to X?")
 - [x] Search over events and entities
 - [x] OpenAI Assistants integration
-- [ ] CrewAI integration
-- [ ] Semantic/vector search
+- [x] CrewAI integration
+- [ ] Semantic/vector search (planned)
 
 ### Phase 3: Active Sharing
 - [ ] Cross-agent context protocol

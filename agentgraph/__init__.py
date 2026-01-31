@@ -24,12 +24,16 @@ try:
         AssistantEventHandler,
         track_assistant_run
     )
-    _HAS_OPENAI = True
 except ImportError:
-    _HAS_OPENAI = False
     OpenAIAssistantsTracker = None
     AssistantEventHandler = None
     track_assistant_run = None
+
+try:
+    from .integrations.crewai import CrewAITracker, CrewAICallback
+except ImportError:
+    CrewAITracker = None
+    CrewAICallback = None
 
 __version__ = "0.2.0"
 __all__ = [
@@ -49,4 +53,6 @@ __all__ = [
     "OpenAIAssistantsTracker",
     "AssistantEventHandler",
     "track_assistant_run",
+    "CrewAITracker",
+    "CrewAICallback",
 ]

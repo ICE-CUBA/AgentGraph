@@ -10,3 +10,4 @@ requests>=2.31.0
 # Optional integrations (uncomment as needed)
 # openai>=1.12.0  # For OpenAI Assistants integration
 # langchain>=0.1.0  # For LangChain integration
+# crewai>=0.28.0  # For CrewAI integration

@@ -4,6 +4,29 @@ AgentGraph Integrations
 Pre-built integrations for popular agent frameworks.
 """
 
-from .openai_assistants import OpenAIAssistantsTracker, track_assistant_run
+# OpenAI Assistants
+try:
+    from .openai_assistants import (
+        OpenAIAssistantsTracker,
+        AssistantEventHandler,
+        track_assistant_run
+    )
+except ImportError:
+    OpenAIAssistantsTracker = None
+    AssistantEventHandler = None
+    track_assistant_run = None
 
-__all__ = ["OpenAIAssistantsTracker", "track_assistant_run"]
+# CrewAI
+try:
+    from .crewai import CrewAITracker, CrewAICallback
+except ImportError:
+    CrewAITracker = None
+    CrewAICallback = None
+
+__all__ = [
+    "OpenAIAssistantsTracker",
+    "AssistantEventHandler",
+    "track_assistant_run",
+    "CrewAITracker",
+    "CrewAICallback"
+]
