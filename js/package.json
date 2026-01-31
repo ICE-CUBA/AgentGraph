@@ -1,5 +1,5 @@
 {
-  "name": "agentgraph",
+  "name": "agentgraph-ai",
   "version": "0.2.0",
   "description": "The Memory Layer for AI Agents - Track, visualize, and share context between AI agents",
   "main": "dist/index.js",

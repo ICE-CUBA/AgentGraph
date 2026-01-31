@@ -5,17 +5,17 @@ The Memory Layer for AI Agents - Track, visualize, and share context between AI 
 ## Installation
 
 ```bash
-npm install agentgraph
+npm install agentgraph-ai
 # or
-yarn add agentgraph
+yarn add agentgraph-ai
 # or
-pnpm add agentgraph
+pnpm add agentgraph-ai
 ```
 
 ## Quick Start
 
 ```typescript
-import { AgentGraphClient } from 'agentgraph';
+import { AgentGraphClient } from 'agentgraph-ai';
 
 // Initialize client
 const client = new AgentGraphClient({
@@ -173,7 +173,7 @@ import type {
   GraphData,
   LogOptions,
   ShareEvent,
-} from 'agentgraph';
+} from 'agentgraph-ai';
 ```
 
 ## License

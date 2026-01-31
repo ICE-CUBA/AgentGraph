@@ -29,21 +29,21 @@ AgentGraph provides:
 ### Python
 
 ```bash
-pip install agentgraph
+pip install agentgraph-ai
 
 # With optional integrations
-pip install agentgraph[all]     # Everything
-pip install agentgraph[server]  # Server only
-pip install agentgraph[mcp]     # MCP server
-pip install agentgraph[search]  # Semantic search
+pip install agentgraph-ai[all]     # Everything
+pip install agentgraph-ai[server]  # Server only
+pip install agentgraph-ai[mcp]     # MCP server
+pip install agentgraph-ai[search]  # Semantic search
 ```
 
 ### JavaScript/TypeScript
 
 ```bash
-npm install agentgraph
+npm install agentgraph-ai
 # or
-yarn add agentgraph
+yarn add agentgraph-ai
 ```
 
 ## 🚀 Quick Start
