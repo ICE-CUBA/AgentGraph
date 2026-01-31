@@ -278,7 +278,7 @@ class AgentGraphCLI:
             return
         
         if not result:
-            msg = f"No agents found"
+            msg = "No agents found"
             if capability:
                 msg += f" with capability '{capability}'"
             print(f"📋 {msg}")
@@ -295,7 +295,7 @@ class AgentGraphCLI:
     
     def registry_heartbeat(self, agent_id: str):
         """Send heartbeat for an agent."""
-        result = self._request("POST", f"/registry/agents/{agent_id}/heartbeat")
+        self._request("POST", f"/registry/agents/{agent_id}/heartbeat")
         print(f"💓 Heartbeat sent for agent {agent_id[:8]}...")
     
     def registry_stats(self, json_output: bool = False):
@@ -306,7 +306,7 @@ class AgentGraphCLI:
             print(json.dumps(result, indent=2, default=str))
             return
         
-        print(f"\n📊 Registry Stats")
+        print("\n📊 Registry Stats")
         print(f"   Total Agents: {result['total_agents']}")
         print(f"   Online: {result['online_agents']}")
         print(f"   Offline: {result['offline_agents']}")

@@ -8,7 +8,6 @@ from typing import Optional
 
 from ..registry import AgentRegistry, Agent, AgentStatus, Capability
 from ..registry.reputation import (
-    ReputationTracker,
     TaskOutcome,
     get_reputation_tracker,
 )

@@ -6,7 +6,7 @@ similar to the easy.py pattern for event logging.
 """
 
 import uuid
-from typing import Optional
+from typing import Optional, List, Union
 
 from .models import Agent, AgentStatus, Capability
 from .registry import AgentRegistry
@@ -25,7 +25,7 @@ def _get_registry() -> AgentRegistry:
 
 def register_agent(
     name: str,
-    capabilities: Optional[list[str | dict | Capability]] = None,
+    capabilities: Optional[List[Union[str, dict, Capability]]] = None,
     description: str = "",
     endpoint: Optional[str] = None,
     agent_id: Optional[str] = None,
@@ -93,7 +93,7 @@ def discover_agents(
     capability: Optional[str] = None,
     online_only: bool = True,
     **filters
-) -> list[Agent]:
+) -> List[Agent]:
     """
     Find agents matching criteria.
     
@@ -164,7 +164,7 @@ def heartbeat(agent_id: str) -> bool:
     return _get_registry().heartbeat(agent_id)
 
 
-def list_agents(online_only: bool = False) -> list[Agent]:
+def list_agents(online_only: bool = False) -> List[Agent]:
     """
     List all registered agents.
     

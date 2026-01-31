@@ -5,7 +5,7 @@ Data models for Agent Registry.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 
 class AgentStatus(str, Enum):
@@ -67,7 +67,7 @@ class Agent:
     id: str
     name: str
     description: str = ""
-    capabilities: list[Capability] = field(default_factory=list)
+    capabilities: List[Capability] = field(default_factory=list)
     status: AgentStatus = AgentStatus.UNKNOWN
     endpoint: Optional[str] = None  # How to reach this agent
     metadata: dict = field(default_factory=dict)

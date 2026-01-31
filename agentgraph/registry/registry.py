@@ -7,7 +7,7 @@ import sqlite3
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from .models import Agent, AgentStatus, Capability
 
@@ -144,7 +144,7 @@ class AgentRegistry:
         status: Optional[AgentStatus] = None,
         online_only: bool = False,
         **capability_filters
-    ) -> list[Agent]:
+    ) -> List[Agent]:
         """
         Discover agents matching criteria.
         
@@ -217,7 +217,7 @@ class AgentRegistry:
         self._conn.commit()
         return cursor.rowcount > 0
     
-    def list_all(self) -> list[Agent]:
+    def list_all(self) -> List[Agent]:
         """List all registered agents."""
         rows = self._conn.execute("SELECT * FROM agents ORDER BY name").fetchall()
         return [self._row_to_agent(row) for row in rows]

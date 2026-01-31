@@ -16,9 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
-
-from .models import Agent
+from typing import Optional, List
 
 
 class TaskOutcome(str, Enum):
@@ -382,7 +380,7 @@ class ReputationTracker:
         # Clamp to [0, 1]
         return round(max(0.0, min(1.0, total_score)), 3)
     
-    def get_leaderboard(self, limit: int = 10) -> list[dict]:
+    def get_leaderboard(self, limit: int = 10) -> List[dict]:
         """
         Get top agents by trust score.
         
