@@ -27,6 +27,10 @@ except ImportError:
     HAS_SEMANTIC_SEARCH = False
     get_search_engine = None
 
+# Sharing hub
+from ..sharing.hub import get_sharing_hub
+from ..sharing.protocol import ContextEvent, Topic
+
 # Initialize FastAPI app
 app = FastAPI(
     title="AgentGraph API",
@@ -778,6 +782,188 @@ async def get_graph_data(include_agents: bool = True, limit: int = 500):
             "agent_count": len(db.list_agents()) if include_agents else 0
         }
     }
+
+
+# ==================== Sharing Hub Endpoints ====================
+
+class ShareEventRequest(BaseModel):
+    topic: str = "action.completed"
+    event_type: str = ""
+    action: str = ""
+    description: str = ""
+    entity_id: Optional[str] = None
+    entity_type: Optional[str] = None
+    target_agent_ids: List[str] = Field(default_factory=list)
+    data: Dict[str, Any] = Field(default_factory=dict)
+    priority: int = 0
+
+
+class SubscribeRequest(BaseModel):
+    topics: List[str] = Field(default_factory=list)
+    entity_ids: List[str] = Field(default_factory=list)
+    source_agent_ids: List[str] = Field(default_factory=list)
+
+
+@app.post("/share/connect")
+async def connect_to_hub(agent: Agent = Depends(get_agent_from_api_key)):
+    """Connect an agent to the sharing hub."""
+    hub = get_sharing_hub()
+    hub.connect_agent(agent.id, agent.name)
+    
+    return {
+        "status": "connected",
+        "agent_id": agent.id,
+        "connected_agents": hub.get_connected_agents()
+    }
+
+
+@app.post("/share/disconnect")
+async def disconnect_from_hub(agent: Agent = Depends(get_agent_from_api_key)):
+    """Disconnect an agent from the sharing hub."""
+    hub = get_sharing_hub()
+    hub.disconnect_agent(agent.id)
+    
+    return {"status": "disconnected", "agent_id": agent.id}
+
+
+@app.get("/share/agents")
+async def get_shared_agents():
+    """Get list of agents connected to the sharing hub."""
+    hub = get_sharing_hub()
+    return {
+        "connected_agents": hub.get_connected_agents(),
+        "count": len(hub.connected_agents)
+    }
+
+
+@app.post("/share/subscribe")
+async def subscribe_to_events(
+    request: SubscribeRequest,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Subscribe to events from other agents."""
+    hub = get_sharing_hub()
+    
+    topics = {Topic(t) for t in request.topics} if request.topics else {Topic.ALL}
+    
+    sub_id = hub.subscribe(
+        agent_id=agent.id,
+        topics=topics,
+        entity_ids=set(request.entity_ids) if request.entity_ids else None,
+        source_agent_ids=set(request.source_agent_ids) if request.source_agent_ids else None
+    )
+    
+    return {
+        "subscription_id": sub_id,
+        "agent_id": agent.id,
+        "topics": [t.value for t in topics]
+    }
+
+
+@app.delete("/share/subscribe/{subscription_id}")
+async def unsubscribe_from_events(
+    subscription_id: str,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Unsubscribe from events."""
+    hub = get_sharing_hub()
+    success = hub.unsubscribe(subscription_id)
+    
+    return {"success": success, "subscription_id": subscription_id}
+
+
+@app.post("/share/publish")
+async def publish_event(
+    request: ShareEventRequest,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Publish a context event to subscribed agents."""
+    hub = get_sharing_hub()
+    
+    event = ContextEvent(
+        source_agent_id=agent.id,
+        topic=Topic(request.topic) if request.topic in [t.value for t in Topic] else Topic.ALL,
+        event_type=request.event_type,
+        action=request.action,
+        description=request.description,
+        entity_id=request.entity_id,
+        entity_type=request.entity_type,
+        target_agent_ids=request.target_agent_ids,
+        data=request.data,
+        priority=request.priority
+    )
+    
+    recipients = await hub.publish(event)
+    
+    # Also broadcast to WebSocket clients
+    await manager.broadcast_event("shared_context", event.to_dict())
+    
+    return {
+        "event_id": event.id,
+        "recipients": recipients,
+        "recipient_count": len(recipients)
+    }
+
+
+@app.get("/share/events")
+async def get_shared_events(
+    agent_id: Optional[str] = None,
+    topic: Optional[str] = None,
+    entity_id: Optional[str] = None,
+    limit: int = 100
+):
+    """Get recent shared events from the hub."""
+    hub = get_sharing_hub()
+    
+    events = hub.get_recent_events(
+        agent_id=agent_id,
+        topic=Topic(topic) if topic else None,
+        entity_id=entity_id,
+        limit=limit
+    )
+    
+    return {
+        "events": [e.to_dict() for e in events],
+        "count": len(events)
+    }
+
+
+@app.post("/share/claim/{entity_id}")
+async def claim_entity(
+    entity_id: str,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Claim exclusive work on an entity (for conflict prevention)."""
+    hub = get_sharing_hub()
+    success = hub.claim_entity(agent.id, entity_id)
+    
+    if not success:
+        current_owner = hub.entity_locks.get(entity_id)
+        raise HTTPException(
+            status_code=409,
+            detail=f"Entity already claimed by agent {current_owner}"
+        )
+    
+    return {"success": True, "entity_id": entity_id, "agent_id": agent.id}
+
+
+@app.post("/share/release/{entity_id}")
+async def release_entity(
+    entity_id: str,
+    agent: Agent = Depends(get_agent_from_api_key)
+):
+    """Release a claim on an entity."""
+    hub = get_sharing_hub()
+    success = hub.release_entity(agent.id, entity_id)
+    
+    return {"success": success, "entity_id": entity_id}
+
+
+@app.get("/share/query")
+async def query_shared_context(q: str):
+    """Query across all shared context."""
+    hub = get_sharing_hub()
+    return hub.query_agents(q)
 
 
 # ==================== Dashboard ====================
