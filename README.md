@@ -1,49 +1,57 @@
-# 🧠 AgentGraph
+# 🕸️ AgentGraph
 
-**The Memory Layer for AI Agents**
+**Infrastructure for Multi-Agent AI Systems**
 
-Track, visualize, and share context between AI agents. Know what your agents are doing and help them collaborate.
+The coordination layer that lets AI agents discover, communicate, and collaborate. Build systems where agents work together — not just alone.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/ICE-CUBA/AgentGraph/actions/workflows/ci.yml/badge.svg)](https://github.com/ICE-CUBA/AgentGraph/actions)
 
-## 🎯 The Problem
+## 🌌 The Vision
 
-AI agents today are isolated. They work, but:
-- No memory of what they did
-- Can't collaborate with other agents
-- Owners can't audit their actions
-- Context is lost between sessions
+Today's AI agents are isolated. Each one starts from scratch, knows nothing about others, and loses everything between sessions.
 
-## 💡 The Solution
+But the future isn't single agents — it's **agent networks**:
+- Teams of specialized agents collaborating on complex problems
+- Agents that learn from each other's experiences  
+- Swarms that coordinate without central control
+- Agent marketplaces, reputation systems, collective intelligence
 
-AgentGraph provides:
-- **Activity Tracking** — Log everything agents do
-- **Memory Graph** — Entities, relationships, and events
-- **Owner Dashboard** — See what's happening in real-time
-- **Graph Visualization** — Interactive D3.js entity relationship graphs
-- **Agent Queries** — Agents can ask "what happened?"
-- **Cross-Agent Context** — Share knowledge between agents
+**AgentGraph is the infrastructure that makes this possible.**
+
+## 🎯 Why AgentGraph?
+
+| Single-Agent Tools | AgentGraph |
+|-------------------|------------|
+| Memory for one agent | Shared knowledge across agents |
+| Trace one agent's actions | Coordinate multiple agents' activities |
+| Debug after the fact | Prevent conflicts in real-time |
+| Isolated context | Connected intelligence |
+
+### Core Capabilities
+
+🔗 **Knowledge Graph** — Not flat memories, but entities and relationships that agents can query and extend
+
+📡 **Real-Time Coordination** — Pub/sub events, WebSocket streaming, instant updates across all connected agents
+
+🤝 **Collaboration Protocol** — Agents claim resources, share context, resolve conflicts automatically
+
+🔍 **Semantic Search** — Find relevant knowledge using natural language, powered by embeddings
+
+🛠️ **Framework Agnostic** — Works with LangChain, OpenAI Assistants, CrewAI, AutoGen, or your own agents
 
 ## 📦 Installation
 
-### Python
-
 ```bash
+# Python
 pip install agentgraph-ai
 
-# With optional integrations
-pip install agentgraph-ai[all]     # Everything
-pip install agentgraph-ai[server]  # Server only
-pip install agentgraph-ai[mcp]     # MCP server
-pip install agentgraph-ai[search]  # Semantic search
-```
+# With all integrations
+pip install agentgraph-ai[all]
 
-### JavaScript/TypeScript
-
-```bash
+# JavaScript/TypeScript  
 npm install agentgraph-ai
-# or
-yarn add agentgraph-ai
 ```
 
 ## 🚀 Quick Start
@@ -51,450 +59,223 @@ yarn add agentgraph-ai
 ### 1. Start the Server
 
 ```bash
-pip install -r requirements.txt
+pip install agentgraph-ai[server]
 python -m agentgraph.api.server
+# Server running at http://localhost:8080
 ```
 
-Server runs at `http://localhost:8080`
-
-### 2. Open the Dashboard
-
-Navigate to `http://localhost:8080` in your browser:
-- **📊 Events Tab** — Real-time activity feed
-- **🕸️ Graph Tab** — Interactive entity relationship visualization
-
-### 3. Register an Agent
-
-```bash
-curl -X POST http://localhost:8080/agents \
-  -H "Content-Type: application/json" \
-  -d '{"name": "MyAgent", "platform": "langchain"}'
-```
-
-Save the `api_key` from the response.
-
-### 4. Use the SDK
-
-#### Python
+### 2. Connect Your First Agent
 
 ```python
 from agentgraph import AgentGraphClient
 
-# Initialize client
-client = AgentGraphClient(api_key="your-api-key")
+client = AgentGraphClient(api_key="your-key")
 
-# Log events
-client.log("tool.call", action="search", input_data={"query": "AI news"})
-client.log("decision", action="summarize", description="User wants a summary")
+# Log what the agent does
+client.log("tool.call", "web_search", {
+    "inputData": {"query": "latest AI research"},
+    "outputData": {"results": 10}
+})
 
-# Create entities and relationships
-user_id = client.create_entity("user", "Alice", {"role": "admin"})
-task_id = client.create_entity("task", "Data Analysis", {"priority": "high"})
-client.create_relationship(user_id, task_id, "owns")
-
-# Use decorator for automatic tracking
-@client.track()
-def process_data(data):
-    return analyze(data)
-
-# Use context manager for duration tracking
-with client.track_context("complex_operation"):
-    step1()
-    step2()
-    step3()
+# Build knowledge
+doc_id = client.create_entity("document", "Research Report")
+client.create_relationship(agent_id, doc_id, "created")
 ```
 
-#### TypeScript/JavaScript
+### 3. Connect Multiple Agents
 
-```typescript
-import { AgentGraphClient } from 'agentgraph';
+```python
+# Agent 1: Research Agent
+research_client = AgentGraphClient(api_key="research-agent-key")
+research_client.share_connect()
+research_client.share_subscribe(topics=["task.assigned"])
 
-const client = new AgentGraphClient({ apiKey: 'your-api-key' });
+# Agent 2: Writer Agent  
+writer_client = AgentGraphClient(api_key="writer-agent-key")
+writer_client.share_connect()
 
-// Log events
-await client.log('tool.call', 'search', { inputData: { query: 'AI news' } });
+# Writer requests help from Research Agent
+writer_client.share_publish({
+    "topic": "task.assigned",
+    "action": "research_request",
+    "description": "Find statistics on AI adoption",
+    "data": {"deadline": "1 hour", "priority": "high"}
+})
 
-// Query activities
-const result = await client.query('what happened today?');
-console.log(result.answer);
-
-// Create entities and relationships
-const userId = await client.createEntity('user', 'Alice');
-const taskId = await client.createEntity('task', 'Data Analysis');
-await client.createRelationship(userId, taskId, 'owns');
-
-// Automatic tracking
-await client.withContext('complex_operation', async () => {
-  await client.log('tool.call', 'step1');
-  await client.log('tool.call', 'step2');
-});
+# Research Agent receives it instantly via WebSocket
+# Agents are now collaborating!
 ```
 
-### 5. Run the Demo
+### 4. Prevent Conflicts
+
+```python
+# Agent 1 claims exclusive work on a customer
+customer_id = "customer-42"
+if client.share_claim(customer_id):
+    # Safe to work — no other agent will touch this
+    process_customer(customer_id)
+    client.share_release(customer_id)
+else:
+    # Another agent is handling it
+    wait_or_do_something_else()
+```
+
+## 🤖 MCP Integration (Claude, Cursor, Cline)
+
+AgentGraph works with any MCP-compatible AI coding tool:
 
 ```bash
-python demo.py
+# Add to Claude Code
+claude mcp add agentgraph -- python -m agentgraph.mcp
+
+# Or run as HTTP server
+python -m agentgraph.mcp --transport http --port 8081
 ```
 
-Creates sample agents, entities, relationships, and events to explore.
-
-## 📊 Event Types
-
-| Type | Description |
-|------|-------------|
-| `action.start` | Action started |
-| `action.complete` | Action completed |
-| `action.error` | Action failed |
-| `tool.call` | Tool/function called |
-| `tool.result` | Tool returned result |
-| `decision` | Agent made a decision |
-| `reasoning` | Agent reasoning step |
-| `message.sent` | Message sent |
-| `message.received` | Message received |
-| `memory.store` | Stored in memory |
-| `memory.retrieve` | Retrieved from memory |
-| `state.change` | State changed |
-
-## 🔗 Entity & Relationship Types
-
-### Entities
-| Type | Description |
-|------|-------------|
-| `agent` | AI agent |
-| `user` | Human user |
-| `task` | Task or job |
-| `tool` | Tool or function |
-| `document` | Document or file |
-| `resource` | External resource |
-| `session` | Conversation session |
-| `custom` | Custom entity type |
-
-### Relationships
-| Type | Description |
-|------|-------------|
-| `created` | A created B |
-| `modified` | A modified B |
-| `referenced` | A referenced B |
-| `depends_on` | A depends on B |
-| `caused` | A caused B |
-| `responded_to` | A responded to B |
-| `part_of` | A is part of B |
-| `owns` | A owns B |
-| `delegated_to` | A delegated to B |
-| `collaborated_with` | A collaborated with B |
-
-## 🤖 MCP Server (AI Coding Tools)
-
-AgentGraph includes a Model Context Protocol (MCP) server for seamless integration with AI coding tools like Claude Code, Cursor, Cline, and Windsurf.
-
-### Quick Setup
-
-```bash
-# Install with MCP support
-pip install agentgraph[mcp]
-
-# Or install MCP separately
-pip install mcp[cli]
-```
-
-### Claude Code Integration
-
-```bash
-# Add AgentGraph to Claude Code
-claude mcp add agentgraph python -m agentgraph.mcp
-
-# With custom server URL
-claude mcp add agentgraph python -m agentgraph.mcp --agentgraph-url http://myserver:8080
-```
-
-### Cursor Integration
-
-Add to your Cursor settings (`.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "agentgraph": {
-      "command": "python",
-      "args": ["-m", "agentgraph.mcp"]
-    }
-  }
-}
-```
-
-### Available MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `query_agentgraph` | Natural language queries ("What did I work on today?") |
-| `log_event` | Log events to AgentGraph |
-| `search_events` | Keyword search over events |
-| `semantic_search` | Embedding-based intelligent search |
-| `get_recent_events` | List recent events |
-| `create_entity` | Create entities in the knowledge graph |
-| `create_relationship` | Create relationships between entities |
-| `get_graph_data` | Get the full entity-relationship graph |
-| `get_agent_stats` | Get statistics for all agents |
-| `health_check` | Check AgentGraph server status |
-
-### Available MCP Resources
-
-- `agentgraph://events/recent` — Recent events
-- `agentgraph://entities` — All entities
-- `agentgraph://graph` — Full graph data
-- `agentgraph://stats` — Agent statistics
+Available tools: `query_agentgraph`, `log_event`, `search_events`, `semantic_search`, `create_entity`, `create_relationship`, `get_graph_data`, and more.
 
 ## 💻 CLI
 
-AgentGraph includes a powerful command-line interface:
-
 ```bash
-# Check server status
-agentgraph status
+# Natural language queries
+agentgraph query "what did my agents work on today?"
 
-# Natural language query
-agentgraph query "what did I work on today?"
-
-# List recent events
+# List recent activity
 agentgraph events --limit 50
-
-# Filter by type
-agentgraph events --type tool.call
-
-# List entities
-agentgraph entities --type task
-
-# Search events
-agentgraph search "error"
-agentgraph search "database" --semantic  # AI-powered search
-
-# Log an event
-agentgraph log tool.call "search" --description "Searched for X"
 
 # View knowledge graph
 agentgraph graph
 
-# JSON output for scripting
-agentgraph events --json | jq '.[] | .action'
+# Search semantically
+agentgraph search "customer onboarding" --semantic
 ```
 
 ## 🔌 Integrations
 
 ### LangChain
-
 ```python
 from agentgraph import AgentGraphClient, LangChainCallback
-from langchain.chat_models import ChatOpenAI
 
 client = AgentGraphClient(api_key="...")
 callback = LangChainCallback(client)
-
 llm = ChatOpenAI(callbacks=[callback])
-# All LLM calls are now tracked!
+# All LLM calls automatically tracked
 ```
 
 ### OpenAI Assistants
-
 ```python
-from openai import OpenAI
 from agentgraph import OpenAIAssistantsTracker
 
-# Initialize
-client = OpenAI()
 tracker = OpenAIAssistantsTracker(agentgraph_api_key="...")
-
-# Wrap the client - all runs are now tracked!
-client = tracker.wrap(client)
-
-# Use normally
-run = client.beta.threads.runs.create_and_poll(
-    thread_id="thread_...",
-    assistant_id="asst_..."
-)
-# Run steps, tool calls, and messages are automatically logged!
-```
-
-Or use the decorator:
-```python
-from agentgraph import track_assistant_run
-
-@track_assistant_run(api_key="...")
-def my_assistant_task():
-    client = OpenAI()
-    # ... your assistant logic ...
-    return result
-```
-
-For streaming:
-```python
-from agentgraph import AssistantEventHandler
-
-handler = AssistantEventHandler(agentgraph_api_key="...")
-
-with client.beta.threads.runs.stream(
-    thread_id="...",
-    assistant_id="...",
-    event_handler=handler
-) as stream:
-    for text in stream.text_deltas:
-        print(text, end="", flush=True)
+client = tracker.wrap(OpenAI())
+# All assistant runs automatically tracked
 ```
 
 ### CrewAI
-
 ```python
-from crewai import Agent, Task, Crew
 from agentgraph import CrewAITracker
 
-# Initialize tracker
 tracker = CrewAITracker(agentgraph_api_key="...")
-
-# Define your crew
-researcher = Agent(role="Researcher", goal="Find information", ...)
-writer = Agent(role="Writer", goal="Write content", ...)
-
-crew = Crew(
-    agents=[researcher, writer],
-    tasks=[...],
-)
-
-# Wrap the crew - all activities are now tracked!
-crew = tracker.wrap(crew)
-
-# Run normally
-result = crew.kickoff()
+crew = tracker.wrap(my_crew)
+# All crew activities tracked, including delegation
 ```
 
-Tracks:
-- Crew kickoff and completion
-- Individual task execution by each agent
-- Agent delegation between crew members
-- Tool usage
-- Task outputs and durations
-
-## 📈 API Endpoints
-
-### Agents
-- `POST /agents` — Register agent (returns API key)
-- `GET /agents` — List agents
-- `GET /agents/{id}` — Get agent details
-- `GET /agents/{id}/stats` — Get agent statistics
-
-### Events
-- `POST /events` — Log event (requires API key)
-- `POST /events/batch` — Log multiple events
-- `GET /events` — List events (with filters)
-- `GET /events/{id}` — Get event details
-
-### Sessions
-- `POST /sessions` — Create session
-- `GET /sessions/{id}` — Get session
-- `GET /sessions/{id}/events` — Get session events
-
-### Entities
-- `POST /entities` — Create entity
-- `GET /entities/{id}` — Get entity details
-- `GET /entities/{id}/relationships` — Get entity relationships
-
-### Relationships
-- `POST /relationships` — Create relationship
-
-### Graph & Visualization
-- `GET /graph/data` — Get nodes + links for D3.js visualization
-- `GET /graph/timeline` — Get activity timeline
-
-### Semantic Search
-- `GET /search/semantic?q=...` — Embedding-based intelligent search
-- `GET /search/similar/{event_id}` — Find similar events
-
-### Cross-Agent Sharing
-- `POST /share/connect` — Connect to sharing hub
-- `POST /share/subscribe` — Subscribe to events from other agents
-- `POST /share/publish` — Share context with subscribed agents
-- `GET /share/agents` — List connected agents
-- `POST /share/claim/{entity_id}` — Claim exclusive work on entity
-- `GET /share/query?q=...` — Query shared context
-
-### Health
-- `GET /health` — Health check
-
-## 🗄️ Data Model
+## 📊 Architecture
 
 ```
-┌─────────┐     logs      ┌─────────┐
-│  Agent  │──────────────►│  Event  │
-└─────────┘               └─────────┘
-     │                         │
-     │ has                     │ references
-     ▼                         ▼
-┌─────────┐              ┌──────────┐
-│ Session │              │  Entity  │
-└─────────┘              └──────────┘
-                              │
-                              │ connects
-                              ▼
-                        ┌──────────────┐
-                        │ Relationship │
-                        └──────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      AgentGraph                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │   Agent A   │  │   Agent B   │  │   Agent C   │         │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+│         │                │                │                 │
+│         └────────────────┼────────────────┘                 │
+│                          │                                  │
+│                   ┌──────▼──────┐                           │
+│                   │  Sharing    │  ← Real-time pub/sub      │
+│                   │    Hub      │                           │
+│                   └──────┬──────┘                           │
+│                          │                                  │
+│         ┌────────────────┼────────────────┐                 │
+│         │                │                │                 │
+│  ┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐        │
+│  │   Events    │  │  Entities   │  │   Search    │        │
+│  │   Store     │  │   Graph     │  │   Index     │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 🛣️ Roadmap
+## 🗺️ Roadmap
 
-### Phase 1: Passive Logging (✅ Complete)
-- [x] Core schema & storage (SQLite)
-- [x] REST API with authentication
-- [x] Python SDK with decorators
-- [x] LangChain integration
-- [x] Dashboard UI (Vue.js + Tailwind)
-- [x] D3.js graph visualization
-- [x] Entity & relationship CRUD
+### ✅ Shipped
+- [x] Event logging and querying
+- [x] Entity/relationship knowledge graph
+- [x] Real-time WebSocket streaming
+- [x] Cross-agent sharing protocol
+- [x] Semantic search with embeddings
+- [x] LangChain, OpenAI, CrewAI integrations
+- [x] MCP server for AI coding tools
+- [x] CLI interface
+- [x] Python + TypeScript SDKs
 
-### Phase 2: Agent Queries (✅ Complete)
-- [x] Real-time WebSocket updates
-- [x] Agent query interface ("what happened to X?")
-- [x] Search over events and entities
-- [x] OpenAI Assistants integration
-- [x] CrewAI integration
-- [x] Semantic/vector search with embeddings
+### 🔜 Coming Soon
+- [ ] Agent Registry — discovery and capability advertising
+- [ ] Trust & Reputation — track agent reliability over time
+- [ ] Federated Mode — connect multiple AgentGraph instances
+- [ ] Evaluation Suite — benchmark agent collaboration
+- [ ] Cloud Platform — managed hosting
 
-### Phase 3: Active Sharing (✅ Complete)
-- [x] Cross-agent context protocol
-- [x] SharingHub for real-time coordination
-- [x] Topic-based subscriptions
-- [x] Conflict detection (entity claims)
-- [x] Event history for late joiners
-- [ ] Multi-tenant support (Phase 4)
+### 🌌 Future Vision
+- [ ] Agent-to-agent protocols (standardized communication)
+- [ ] Collective learning (agents improve from shared experiences)
+- [ ] Economic primitives (value exchange between agents)
+- [ ] Decentralized agent networks
 
-### Phase 4: Cloud Platform
-- [ ] Hosted cloud version
-- [ ] User authentication
-- [ ] Team workspaces
-- [ ] Usage analytics
+## 🆚 How We're Different
 
-## 🏗️ Architecture
+| Feature | AgentGraph | Mem0 | Langfuse | LangSmith |
+|---------|------------|------|----------|-----------|
+| **Multi-agent coordination** | ✅ Native | ❌ | ❌ | ❌ |
+| **Real-time sharing** | ✅ WebSocket | ❌ | ❌ | ❌ |
+| **Knowledge graph** | ✅ Entities + relationships | Flat memories | Traces only | Traces only |
+| **Conflict prevention** | ✅ Claims system | ❌ | ❌ | ❌ |
+| **Observability** | ✅ | ❌ | ✅ | ✅ |
+| **Semantic search** | ✅ | ✅ | ❌ | ✅ |
+| **Self-hostable** | ✅ | ✅ | ✅ | Enterprise |
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    AgentGraph                           │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │   SDK       │  │   REST API  │  │  Dashboard  │     │
-│  │  (Python)   │  │  (FastAPI)  │  │  (Vue.js)   │     │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
-│         │                │                │             │
-│         └────────────────┼────────────────┘             │
-│                          │                              │
-│                   ┌──────▼──────┐                       │
-│                   │   Storage   │                       │
-│                   │  (SQLite)   │                       │
-│                   └─────────────┘                       │
-└─────────────────────────────────────────────────────────┘
+**We're not building memory for single agents. We're building infrastructure for agent networks.**
+
+## 📖 Documentation
+
+- [API Reference](./docs/api.md)
+- [SDK Guide](./docs/sdk.md)
+- [Multi-Agent Tutorial](./examples/multi_agent_demo.py)
+- [MCP Integration](./docs/mcp.md)
+
+## 🤝 Contributing
+
+We're building the future of multi-agent AI. Contributions welcome!
+
+```bash
+git clone https://github.com/ICE-CUBA/AgentGraph.git
+cd AgentGraph
+pip install -e ".[all]"
+pytest tests/
 ```
 
 ## 📄 License
 
-MIT
+MIT — build whatever you want.
 
 ---
 
-Built for the future of multi-agent AI systems. 🤖🤝🤖
+<p align="center">
+  <b>The future is multi-agent. Start building it today.</b>
+  <br><br>
+  <a href="https://github.com/ICE-CUBA/AgentGraph">GitHub</a> ·
+  <a href="https://github.com/ICE-CUBA/AgentGraph/issues">Issues</a> ·
+  <a href="https://github.com/ICE-CUBA/AgentGraph/discussions">Discussions</a>
+</p>

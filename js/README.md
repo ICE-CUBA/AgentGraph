@@ -1,6 +1,6 @@
 # AgentGraph JavaScript/TypeScript SDK
 
-The Memory Layer for AI Agents - Track, visualize, and share context between AI agents.
+Infrastructure for Multi-Agent AI Systems — the coordination layer that lets AI agents discover, communicate, and collaborate.
 
 ## Installation
 
