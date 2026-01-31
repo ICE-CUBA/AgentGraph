@@ -272,6 +272,139 @@ class AgentGraphClient:
         """Get all events that reference an entity."""
         return self._request("GET", f"/entities/{entity_id}/history")
     
+    # ==================== Sharing Methods ====================
+    
+    def share_connect(self) -> Dict[str, Any]:
+        """
+        Connect to the sharing hub for cross-agent collaboration.
+        
+        Returns:
+            Connection info including list of connected agents
+        """
+        return self._request("POST", "/share/connect")
+    
+    def share_disconnect(self) -> Dict[str, Any]:
+        """Disconnect from the sharing hub."""
+        return self._request("POST", "/share/disconnect")
+    
+    def share_subscribe(
+        self,
+        topics: Optional[List[str]] = None,
+        entity_ids: Optional[List[str]] = None,
+        source_agent_ids: Optional[List[str]] = None
+    ) -> str:
+        """
+        Subscribe to events from other agents.
+        
+        Args:
+            topics: Event topics to subscribe to (e.g., "decision.made", "action.completed")
+            entity_ids: Specific entities to watch
+            source_agent_ids: Specific agents to watch
+        
+        Returns:
+            Subscription ID
+        """
+        payload = {
+            "topics": topics or [],
+            "entity_ids": entity_ids or [],
+            "source_agent_ids": source_agent_ids or []
+        }
+        result = self._request("POST", "/share/subscribe", json=payload)
+        return result.get("subscription_id", "")
+    
+    def share_unsubscribe(self, subscription_id: str) -> bool:
+        """Unsubscribe from events."""
+        result = self._request("DELETE", f"/share/subscribe/{subscription_id}")
+        return result.get("success", False)
+    
+    def share_publish(
+        self,
+        topic: str = "action.completed",
+        action: str = "",
+        description: str = "",
+        entity_id: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        target_agent_ids: Optional[List[str]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        priority: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Publish a context event to other agents.
+        
+        Args:
+            topic: Event topic (e.g., "decision.made", "action.completed")
+            action: Action name
+            description: Human-readable description
+            entity_id: Related entity ID
+            entity_type: Type of entity
+            target_agent_ids: Specific agents to send to (empty = broadcast to subscribers)
+            data: Additional context data
+            priority: Event priority (higher = more important)
+        
+        Returns:
+            Event info including recipient count
+        """
+        payload = {
+            "topic": topic,
+            "action": action,
+            "description": description,
+            "entity_id": entity_id,
+            "entity_type": entity_type,
+            "target_agent_ids": target_agent_ids or [],
+            "data": data or {},
+            "priority": priority
+        }
+        return self._request("POST", "/share/publish", json=payload)
+    
+    def share_get_agents(self) -> List[Dict[str, Any]]:
+        """Get list of agents connected to the sharing hub."""
+        result = self._request("GET", "/share/agents")
+        return result.get("connected_agents", [])
+    
+    def share_get_events(
+        self,
+        agent_id: Optional[str] = None,
+        topic: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """Get recent shared events."""
+        params = f"?limit={limit}"
+        if agent_id:
+            params += f"&agent_id={agent_id}"
+        if topic:
+            params += f"&topic={topic}"
+        if entity_id:
+            params += f"&entity_id={entity_id}"
+        
+        result = self._request("GET", f"/share/events{params}")
+        return result.get("events", [])
+    
+    def share_claim(self, entity_id: str) -> bool:
+        """
+        Claim exclusive work on an entity.
+        
+        Prevents other agents from claiming the same entity.
+        Use for conflict prevention.
+        
+        Returns:
+            True if claim successful
+        """
+        try:
+            self._request("POST", f"/share/claim/{entity_id}")
+            return True
+        except Exception:
+            return False
+    
+    def share_release(self, entity_id: str) -> bool:
+        """Release a claim on an entity."""
+        result = self._request("POST", f"/share/release/{entity_id}")
+        return result.get("success", False)
+    
+    def share_query(self, question: str) -> Dict[str, Any]:
+        """Query across all shared context."""
+        return self._request("GET", f"/share/query?q={question}")
+    
     # ==================== Convenience Methods ====================
     
     def log_tool_call(
