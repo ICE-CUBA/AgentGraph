@@ -79,7 +79,7 @@ except ImportError:
     CrewAITracker = None
     CrewAICallback = None
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
     # Easy mode (recommended for getting started)
     "log",

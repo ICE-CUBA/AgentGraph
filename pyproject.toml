@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentgraph-ai"
-version = "0.2.0"
-description = "The Memory Layer for AI Agents - Track, visualize, and share context between AI agents"
+version = "0.3.0"
+description = "Infrastructure for Multi-Agent AI Systems - Discovery, coordination, and trust for agent networks"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
     {name = "ICE-CUBA"}
 ]
-keywords = ["ai", "agents", "llm", "tracking", "observability", "langchain", "openai", "crewai"]
+keywords = ["ai", "agents", "multi-agent", "llm", "coordination", "discovery", "registry", "langchain", "openai", "crewai"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

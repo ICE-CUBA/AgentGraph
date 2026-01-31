@@ -40,7 +40,7 @@ from ..registry import AgentRegistry
 app = FastAPI(
     title="AgentGraph API",
     description="Track and visualize AI agent activities",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 
@@ -203,7 +203,7 @@ async def get_agent_from_api_key(x_api_key: str = Header(...)) -> Agent:
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "version": "0.2.0", "websocket": "/ws"}
+    return {"status": "ok", "version": "0.3.0", "websocket": "/ws"}
 
 
 # ==================== WebSocket Endpoint ====================
