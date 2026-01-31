@@ -53,6 +53,12 @@ from .registry import (
     Agent as RegistryAgent,
     Capability,
     AgentStatus,
+    # Reputation system
+    record_task,
+    complete_task,
+    rate_agent,
+    get_trust,
+    TaskOutcome,
 )
 
 # Import integrations (optional dependencies)
@@ -94,6 +100,12 @@ __all__ = [
     "RegistryAgent",
     "Capability",
     "AgentStatus",
+    # Reputation system
+    "record_task",
+    "complete_task",
+    "rate_agent",
+    "get_trust",
+    "TaskOutcome",
     # Core schema
     "Agent",
     "Entity",

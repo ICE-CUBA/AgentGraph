@@ -7,6 +7,11 @@ from pydantic import BaseModel
 from typing import Optional
 
 from ..registry import AgentRegistry, Agent, AgentStatus, Capability
+from ..registry.reputation import (
+    ReputationTracker,
+    TaskOutcome,
+    get_reputation_tracker,
+)
 
 router = APIRouter(prefix="/registry", tags=["registry"])
 
@@ -181,3 +186,114 @@ async def cleanup_stale():
     count = registry.cleanup_stale()
     
     return {"status": "ok", "agents_marked_offline": count}
+
+
+# ==================== Reputation Routes ====================
+
+class RecordTaskRequest(BaseModel):
+    agent_id: str
+    task_type: str
+    task_id: Optional[str] = None
+    metadata: dict = {}
+
+
+class CompleteTaskRequest(BaseModel):
+    outcome: str  # "success", "failure", "timeout", "partial"
+    error_message: Optional[str] = None
+
+
+class RateTaskRequest(BaseModel):
+    rating: float  # 0.0 to 1.0
+    rated_by: Optional[str] = None
+
+
+class AgentStatsResponse(BaseModel):
+    agent_id: str
+    total_tasks: int
+    success_count: Optional[int] = None
+    failure_count: Optional[int] = None
+    success_rate: float
+    avg_duration_ms: Optional[float] = None
+    avg_rating: Optional[float] = None
+    trust_score: float
+
+
+@router.post("/tasks/start")
+async def start_task(request: RecordTaskRequest):
+    """Record the start of a task."""
+    tracker = get_reputation_tracker()
+    
+    task_id = tracker.record_task_start(
+        agent_id=request.agent_id,
+        task_type=request.task_type,
+        task_id=request.task_id,
+        metadata=request.metadata,
+    )
+    
+    return {"task_id": task_id, "status": "started"}
+
+
+@router.post("/tasks/{task_id}/complete")
+async def complete_task(task_id: str, request: CompleteTaskRequest):
+    """Record task completion."""
+    tracker = get_reputation_tracker()
+    
+    try:
+        outcome = TaskOutcome(request.outcome)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid outcome. Must be one of: {[o.value for o in TaskOutcome]}"
+        )
+    
+    success = tracker.record_task_complete(
+        task_id=task_id,
+        outcome=outcome,
+        error_message=request.error_message,
+    )
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {"task_id": task_id, "status": "completed", "outcome": outcome.value}
+
+
+@router.post("/tasks/{task_id}/rate")
+async def rate_task(task_id: str, request: RateTaskRequest):
+    """Rate a completed task."""
+    tracker = get_reputation_tracker()
+    
+    success = tracker.rate_task(
+        task_id=task_id,
+        rating=request.rating,
+        rated_by=request.rated_by,
+    )
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {"task_id": task_id, "rating": request.rating}
+
+
+@router.get("/agents/{agent_id}/reputation", response_model=AgentStatsResponse)
+async def get_agent_reputation(agent_id: str):
+    """Get reputation and statistics for an agent."""
+    tracker = get_reputation_tracker()
+    stats = tracker.get_agent_stats(agent_id)
+    return AgentStatsResponse(**stats)
+
+
+@router.get("/agents/{agent_id}/trust")
+async def get_agent_trust(agent_id: str):
+    """Get just the trust score for an agent."""
+    tracker = get_reputation_tracker()
+    score = tracker.get_trust_score(agent_id)
+    return {"agent_id": agent_id, "trust_score": score}
+
+
+@router.get("/leaderboard")
+async def get_leaderboard(limit: int = Query(10, ge=1, le=100)):
+    """Get top agents by trust score."""
+    tracker = get_reputation_tracker()
+    leaderboard = tracker.get_leaderboard(limit=limit)
+    return {"leaderboard": leaderboard, "count": len(leaderboard)}
