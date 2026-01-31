@@ -1,12 +1,34 @@
 """
 Tests for Semantic Search module.
+
+These tests require numpy to be installed.
 """
 
 import pytest
 from unittest.mock import patch, MagicMock
-import numpy as np
 
-from agentgraph.search.semantic import SemanticSearch, HAS_SKLEARN
+# Check if numpy is available (required by search module)
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
+
+# Check if search module can be imported
+try:
+    from agentgraph.search.semantic import SemanticSearch, HAS_SKLEARN
+    HAS_SEARCH = True
+except ImportError:
+    HAS_SEARCH = False
+    SemanticSearch = None
+    HAS_SKLEARN = False
+
+# Skip all tests if dependencies not available
+pytestmark = pytest.mark.skipif(
+    not HAS_NUMPY or not HAS_SEARCH, 
+    reason="numpy or search module not available"
+)
 
 
 class TestSemanticSearchInit:
