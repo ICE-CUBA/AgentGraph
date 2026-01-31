@@ -44,7 +44,7 @@ def main():
     try:
         health = requests.get(f"{BASE_URL}/health").json()
         print(f"\n✅ Server running: {health}")
-    except:
+    except Exception:
         print("\n❌ Server not running! Start with: python -m agentgraph.api.server")
         return
     
@@ -74,18 +74,18 @@ def main():
     print("\n📡 Setting up subscriptions...")
     
     # Agent 1 subscribes to decisions
-    sub1 = requests.post(f"{BASE_URL}/share/subscribe", 
+    requests.post(f"{BASE_URL}/share/subscribe", 
         json={"topics": ["decision.made", "action.completed"]},
         headers=headers1
-    ).json()
-    print(f"   ✓ ResearchAgent subscribed to: decision.made, action.completed")
+    )
+    print("   ✓ ResearchAgent subscribed to: decision.made, action.completed")
     
     # Agent 2 subscribes to all
-    sub2 = requests.post(f"{BASE_URL}/share/subscribe",
+    requests.post(f"{BASE_URL}/share/subscribe",
         json={"topics": ["*"]},
         headers=headers2
-    ).json()
-    print(f"   ✓ AnalysisAgent subscribed to: all events")
+    )
+    print("   ✓ AnalysisAgent subscribed to: all events")
     
     # Simulate collaboration
     print("\n🔄 Simulating agent collaboration...")
@@ -111,7 +111,7 @@ def main():
             "confidence": 0.85
         }
     }).json()
-    print(f"[ResearchAgent] Published: customer_research")
+    print("[ResearchAgent] Published: customer_research")
     print(f"   → Recipients: {pub1['recipient_count']} agents")
     
     time.sleep(0.5)
@@ -120,7 +120,7 @@ def main():
     claim2 = requests.post(f"{BASE_URL}/share/claim/{customer_id}", headers=headers2)
     if claim2.status_code == 409:
         print(f"\n[AnalysisAgent] ⚠️ Cannot claim {customer_id} - already claimed!")
-        print(f"   → Will coordinate with ResearchAgent instead")
+        print("   → Will coordinate with ResearchAgent instead")
     
     # Agent 2 publishes analysis request (using action.started as topic)
     resp = requests.post(f"{BASE_URL}/share/publish", headers=headers2, json={
@@ -135,8 +135,7 @@ def main():
         "priority": 5
     })
     if resp.status_code == 200:
-        pub2 = resp.json()
-        print(f"\n[AnalysisAgent] Published: analysis_request (direct to ResearchAgent)")
+        print("\n[AnalysisAgent] Published: analysis_request (direct to ResearchAgent)")
     else:
         print(f"\n[AnalysisAgent] Failed: {resp.status_code} - {resp.text[:100]}")
     
@@ -155,7 +154,7 @@ def main():
         }
     })
     if resp.status_code == 200:
-        print(f"\n[ResearchAgent] Published: extended_research")
+        print("\n[ResearchAgent] Published: extended_research")
     
     # Agent 1 makes a decision
     resp = requests.post(f"{BASE_URL}/share/publish", headers=headers1, json={
@@ -171,7 +170,7 @@ def main():
         "priority": 8
     })
     if resp.status_code == 200:
-        print(f"[ResearchAgent] Published: strategy_decision (priority: 8)")
+        print("[ResearchAgent] Published: strategy_decision (priority: 8)")
     
     # Release the claim
     requests.post(f"{BASE_URL}/share/release/{customer_id}", headers=headers1)
@@ -182,12 +181,12 @@ def main():
     print("\n🔍 Querying shared context...")
     
     query = requests.get(f"{BASE_URL}/share/query?q=customer").json()
-    print(f"\nQuery: 'customer'")
+    print("\nQuery: 'customer'")
     print(f"   Found: {query['count']} events")
     
     # Get recent events
     events = requests.get(f"{BASE_URL}/share/events?limit=5").json()
-    print(f"\n📜 Recent shared events:")
+    print("\n📜 Recent shared events:")
     for e in events["events"][:5]:
         print(f"   • [{e['topic']}] {e['action']}: {e['description'][:40]}...")
     

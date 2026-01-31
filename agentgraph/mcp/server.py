@@ -17,12 +17,10 @@ Usage:
 
 import os
 import json
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 try:
     from mcp.server.mcpserver import MCPServer
-    from mcp.types import TextContent, Resource
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False

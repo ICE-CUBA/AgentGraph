@@ -2,7 +2,6 @@
 Tests for AgentGraph SDK
 """
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 from agentgraph import AgentGraphClient

@@ -40,29 +40,29 @@ def run_demo(agent_data: dict):
     # Create some users
     user1_id = client.create_entity("user", "Alice", {"role": "admin"})
     user2_id = client.create_entity("user", "Bob", {"role": "developer"})
-    print(f"   ✓ Created users: Alice, Bob")
+    print("   ✓ Created users: Alice, Bob")
     
     # Create tasks
     task1_id = client.create_entity("task", "Data Analysis", {"priority": "high"})
     task2_id = client.create_entity("task", "Report Generation", {"priority": "medium"})
     task3_id = client.create_entity("task", "API Integration", {"priority": "low"})
-    print(f"   ✓ Created tasks: Data Analysis, Report Generation, API Integration")
+    print("   ✓ Created tasks: Data Analysis, Report Generation, API Integration")
     
     # Create tools
     tool1_id = client.create_entity("tool", "search", {"version": "1.0"})
     tool2_id = client.create_entity("tool", "summarize", {"version": "2.1"})
     tool3_id = client.create_entity("tool", "analyze", {"version": "1.5"})
-    print(f"   ✓ Created tools: search, summarize, analyze")
+    print("   ✓ Created tools: search, summarize, analyze")
     
     # Create documents
     doc1_id = client.create_entity("document", "Q4 Report", {"type": "pdf"})
     doc2_id = client.create_entity("document", "API Docs", {"type": "markdown"})
-    print(f"   ✓ Created documents: Q4 Report, API Docs")
+    print("   ✓ Created documents: Q4 Report, API Docs")
     
     # Create resources
     res1_id = client.create_entity("resource", "Database", {"type": "postgres"})
     res2_id = client.create_entity("resource", "Cache", {"type": "redis"})
-    print(f"   ✓ Created resources: Database, Cache")
+    print("   ✓ Created resources: Database, Cache")
     
     print("\n🔗 Creating relationships...")
     
@@ -70,33 +70,33 @@ def run_demo(agent_data: dict):
     client.create_relationship(user1_id, task1_id, "owns", {"assigned": "2024-01-15"})
     client.create_relationship(user2_id, task2_id, "owns", {"assigned": "2024-01-16"})
     client.create_relationship(user2_id, task3_id, "owns", {"assigned": "2024-01-17"})
-    print(f"   ✓ Users assigned to tasks")
+    print("   ✓ Users assigned to tasks")
     
     # Tasks depend on each other
     client.create_relationship(task2_id, task1_id, "depends_on", {"blocking": True})
-    print(f"   ✓ Task dependencies")
+    print("   ✓ Task dependencies")
     
     # Tasks use tools
     client.create_relationship(task1_id, tool3_id, "referenced", {"usage": "primary"})
     client.create_relationship(task1_id, tool1_id, "referenced", {"usage": "secondary"})
     client.create_relationship(task2_id, tool2_id, "referenced", {"usage": "primary"})
     client.create_relationship(task3_id, tool1_id, "referenced", {"usage": "primary"})
-    print(f"   ✓ Tasks linked to tools")
+    print("   ✓ Tasks linked to tools")
     
     # Documents created by tasks
     client.create_relationship(task1_id, doc1_id, "created")
     client.create_relationship(task3_id, doc2_id, "created")
-    print(f"   ✓ Tasks created documents")
+    print("   ✓ Tasks created documents")
     
     # Tools access resources
     client.create_relationship(tool1_id, res1_id, "referenced", {"type": "read"})
     client.create_relationship(tool3_id, res1_id, "referenced", {"type": "read"})
     client.create_relationship(tool3_id, res2_id, "referenced", {"type": "cache"})
-    print(f"   ✓ Tools linked to resources")
+    print("   ✓ Tools linked to resources")
     
     # Users collaborate
     client.create_relationship(user1_id, user2_id, "collaborated_with", {"project": "Q4 Analysis"})
-    print(f"   ✓ User collaboration")
+    print("   ✓ User collaboration")
     
     print("\n📊 Logging sample events...")
     
@@ -114,7 +114,7 @@ def run_demo(agent_data: dict):
         time.sleep(random.uniform(0.1, 0.3))
         duration = random.randint(50, 500)
         
-        event_id = client.log(
+        client.log(
             event_type=event_type,
             action=action,
             input_data=input_data,
@@ -131,7 +131,7 @@ def run_demo(agent_data: dict):
         error_message="Connection timeout",
         description="Demo error event"
     )
-    print(f"   ✓ action.error: failed_operation")
+    print("   ✓ action.error: failed_operation")
     
     # Use decorator example
     @client.track(event_type="tool.call", action="decorated_function")
@@ -148,7 +148,7 @@ def run_demo(agent_data: dict):
         client.log("tool.call", action="nested_step_1")
         time.sleep(0.1)
         client.log("tool.call", action="nested_step_2")
-    print(f"   ✓ Context manager with nested events")
+    print("   ✓ Context manager with nested events")
     
     print("\n" + "=" * 50)
     print("🔍 Testing Agent Query Interface")
@@ -190,7 +190,7 @@ def main():
         response = requests.get(f"{BASE_URL}/health")
         if response.status_code != 200:
             raise Exception("Server not healthy")
-    except:
+    except Exception:
         print("\n❌ Server not running!")
         print("   Start it with: python -m agentgraph.api.server")
         return

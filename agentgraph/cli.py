@@ -16,8 +16,6 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
-from typing import Optional
 
 import requests
 
@@ -122,7 +120,6 @@ class AgentGraphCLI:
         
         print(f"\n🔗 Entities ({len(entities)}):\n")
         for entity in entities:
-            created = entity.get("created_at", "")[:16].replace("T", " ")
             print(f"• [{entity.get('type', ''):<10}] {entity.get('name', '')}")
             if entity.get("metadata"):
                 print(f"   {json.dumps(entity.get('metadata', {}))[:80]}")
@@ -205,17 +202,13 @@ class AgentGraphCLI:
     def status(self):
         """Check server status."""
         try:
-            result = self._request("GET", "/health")
+            self._request("GET", "/health")
             print(f"✅ AgentGraph server is healthy at {self.base_url}")
             
             # Get agent count
             agents = self._request("GET", "/agents")
             print(f"   Agents: {len(agents.get('agents', []))}")
-            
-            # Get event count
-            events = self._request("GET", "/events?limit=1")
-            # Try to get total from response
-            print(f"   Status: Running")
+            print("   Status: Running")
             
         except Exception as e:
             print(f"❌ AgentGraph server unavailable: {e}")
