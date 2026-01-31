@@ -133,6 +133,101 @@ Creates sample agents, entities, relationships, and events to explore.
 | `delegated_to` | A delegated to B |
 | `collaborated_with` | A collaborated with B |
 
+## 🤖 MCP Server (AI Coding Tools)
+
+AgentGraph includes a Model Context Protocol (MCP) server for seamless integration with AI coding tools like Claude Code, Cursor, Cline, and Windsurf.
+
+### Quick Setup
+
+```bash
+# Install with MCP support
+pip install agentgraph[mcp]
+
+# Or install MCP separately
+pip install mcp[cli]
+```
+
+### Claude Code Integration
+
+```bash
+# Add AgentGraph to Claude Code
+claude mcp add agentgraph python -m agentgraph.mcp
+
+# With custom server URL
+claude mcp add agentgraph python -m agentgraph.mcp --agentgraph-url http://myserver:8080
+```
+
+### Cursor Integration
+
+Add to your Cursor settings (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "agentgraph": {
+      "command": "python",
+      "args": ["-m", "agentgraph.mcp"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `query_agentgraph` | Natural language queries ("What did I work on today?") |
+| `log_event` | Log events to AgentGraph |
+| `search_events` | Keyword search over events |
+| `semantic_search` | Embedding-based intelligent search |
+| `get_recent_events` | List recent events |
+| `create_entity` | Create entities in the knowledge graph |
+| `create_relationship` | Create relationships between entities |
+| `get_graph_data` | Get the full entity-relationship graph |
+| `get_agent_stats` | Get statistics for all agents |
+| `health_check` | Check AgentGraph server status |
+
+### Available MCP Resources
+
+- `agentgraph://events/recent` — Recent events
+- `agentgraph://entities` — All entities
+- `agentgraph://graph` — Full graph data
+- `agentgraph://stats` — Agent statistics
+
+## 💻 CLI
+
+AgentGraph includes a powerful command-line interface:
+
+```bash
+# Check server status
+agentgraph status
+
+# Natural language query
+agentgraph query "what did I work on today?"
+
+# List recent events
+agentgraph events --limit 50
+
+# Filter by type
+agentgraph events --type tool.call
+
+# List entities
+agentgraph entities --type task
+
+# Search events
+agentgraph search "error"
+agentgraph search "database" --semantic  # AI-powered search
+
+# Log an event
+agentgraph log tool.call "search" --description "Searched for X"
+
+# View knowledge graph
+agentgraph graph
+
+# JSON output for scripting
+agentgraph events --json | jq '.[] | .action'
+```
+
 ## 🔌 Integrations
 
 ### LangChain
