@@ -24,6 +24,28 @@ AgentGraph provides:
 - **Agent Queries** — Agents can ask "what happened?"
 - **Cross-Agent Context** — Share knowledge between agents
 
+## 📦 Installation
+
+### Python
+
+```bash
+pip install agentgraph
+
+# With optional integrations
+pip install agentgraph[all]     # Everything
+pip install agentgraph[server]  # Server only
+pip install agentgraph[mcp]     # MCP server
+pip install agentgraph[search]  # Semantic search
+```
+
+### JavaScript/TypeScript
+
+```bash
+npm install agentgraph
+# or
+yarn add agentgraph
+```
+
 ## 🚀 Quick Start
 
 ### 1. Start the Server
@@ -53,6 +75,8 @@ Save the `api_key` from the response.
 
 ### 4. Use the SDK
 
+#### Python
+
 ```python
 from agentgraph import AgentGraphClient
 
@@ -78,6 +102,32 @@ with client.track_context("complex_operation"):
     step1()
     step2()
     step3()
+```
+
+#### TypeScript/JavaScript
+
+```typescript
+import { AgentGraphClient } from 'agentgraph';
+
+const client = new AgentGraphClient({ apiKey: 'your-api-key' });
+
+// Log events
+await client.log('tool.call', 'search', { inputData: { query: 'AI news' } });
+
+// Query activities
+const result = await client.query('what happened today?');
+console.log(result.answer);
+
+// Create entities and relationships
+const userId = await client.createEntity('user', 'Alice');
+const taskId = await client.createEntity('task', 'Data Analysis');
+await client.createRelationship(userId, taskId, 'owns');
+
+// Automatic tracking
+await client.withContext('complex_operation', async () => {
+  await client.log('tool.call', 'step1');
+  await client.log('tool.call', 'step2');
+});
 ```
 
 ### 5. Run the Demo
