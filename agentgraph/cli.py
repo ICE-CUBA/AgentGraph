@@ -199,6 +199,118 @@ class AgentGraphCLI:
             for link in links[:20]:
                 print(f"  → {link.get('source', '')[:8]}... --[{link.get('type', '')}]--> {link.get('target', '')[:8]}...")
     
+    # ==================== Registry Commands ====================
+    
+    def registry_list(self, online_only: bool = False, json_output: bool = False):
+        """List registered agents."""
+        params = {}
+        if online_only:
+            params["online_only"] = "true"
+        
+        result = self._request("GET", "/registry/agents", params=params)
+        
+        if json_output:
+            print(json.dumps(result, indent=2, default=str))
+            return
+        
+        if not result:
+            print("📋 No agents registered yet")
+            return
+        
+        print(f"\n🤖 Registered Agents ({len(result)} total)\n")
+        
+        for agent in result:
+            status_icon = {"online": "🟢", "busy": "🟡", "offline": "🔴"}.get(agent["status"], "⚪")
+            caps = ", ".join([c["name"] for c in agent.get("capabilities", [])])
+            print(f"  {status_icon} {agent['name']} ({agent['id'][:8]}...)")
+            if agent.get("description"):
+                print(f"      {agent['description']}")
+            if caps:
+                print(f"      Capabilities: {caps}")
+            print()
+    
+    def registry_register(
+        self, 
+        name: str, 
+        capabilities: list = None,
+        description: str = "",
+        endpoint: str = None,
+        json_output: bool = False
+    ):
+        """Register a new agent."""
+        caps = []
+        for cap in (capabilities or []):
+            if isinstance(cap, str):
+                caps.append({"name": cap, "metadata": {}})
+        
+        data = {
+            "name": name,
+            "description": description,
+            "capabilities": caps,
+            "endpoint": endpoint,
+        }
+        
+        result = self._request("POST", "/registry/agents", json=data)
+        
+        if json_output:
+            print(json.dumps(result, indent=2, default=str))
+            return
+        
+        print(f"✅ Agent registered: {result['name']} (ID: {result['id'][:8]}...)")
+        if caps:
+            print(f"   Capabilities: {', '.join(c['name'] for c in caps)}")
+    
+    def registry_discover(
+        self, 
+        capability: str = None,
+        online_only: bool = True,
+        json_output: bool = False
+    ):
+        """Discover agents by capability."""
+        params = {"online_only": str(online_only).lower()}
+        if capability:
+            params["capability"] = capability
+        
+        result = self._request("GET", "/registry/agents", params=params)
+        
+        if json_output:
+            print(json.dumps(result, indent=2, default=str))
+            return
+        
+        if not result:
+            msg = f"No agents found"
+            if capability:
+                msg += f" with capability '{capability}'"
+            print(f"📋 {msg}")
+            return
+        
+        cap_msg = f" with '{capability}'" if capability else ""
+        print(f"\n🔍 Found {len(result)} agent(s){cap_msg}\n")
+        
+        for agent in result:
+            status_icon = {"online": "🟢", "busy": "🟡", "offline": "🔴"}.get(agent["status"], "⚪")
+            print(f"  {status_icon} {agent['name']} ({agent['id'][:8]}...)")
+            if agent.get("endpoint"):
+                print(f"      Endpoint: {agent['endpoint']}")
+    
+    def registry_heartbeat(self, agent_id: str):
+        """Send heartbeat for an agent."""
+        result = self._request("POST", f"/registry/agents/{agent_id}/heartbeat")
+        print(f"💓 Heartbeat sent for agent {agent_id[:8]}...")
+    
+    def registry_stats(self, json_output: bool = False):
+        """Get registry statistics."""
+        result = self._request("GET", "/registry/stats")
+        
+        if json_output:
+            print(json.dumps(result, indent=2, default=str))
+            return
+        
+        print(f"\n📊 Registry Stats")
+        print(f"   Total Agents: {result['total_agents']}")
+        print(f"   Online: {result['online_agents']}")
+        print(f"   Offline: {result['offline_agents']}")
+    
     def status(self):
         """Check server status."""
         try:
@@ -209,6 +321,13 @@ class AgentGraphCLI:
             agents = self._request("GET", "/agents")
             print(f"   Agents: {len(agents.get('agents', []))}")
             print("   Status: Running")
+            
+            # Registry stats
+            try:
+                registry_stats = self._request("GET", "/registry/stats")
+                print(f"   Registry: {registry_stats['total_agents']} agents ({registry_stats['online_agents']} online)")
+            except Exception:
+                pass
             
         except Exception as e:
             print(f"❌ AgentGraph server unavailable: {e}")
@@ -275,6 +394,33 @@ Environment Variables:
     # Graph
     subparsers.add_parser("graph", help="Show knowledge graph")
     
+    # Registry - Agent Discovery
+    registry_parser = subparsers.add_parser("registry", help="Agent registry commands")
+    registry_subparsers = registry_parser.add_subparsers(dest="registry_command", help="Registry commands")
+    
+    # registry list
+    registry_list_parser = registry_subparsers.add_parser("list", help="List registered agents")
+    registry_list_parser.add_argument("--online", action="store_true", help="Only show online agents")
+    
+    # registry register
+    registry_register_parser = registry_subparsers.add_parser("register", help="Register a new agent")
+    registry_register_parser.add_argument("name", help="Agent name")
+    registry_register_parser.add_argument("--capabilities", "-c", nargs="*", help="Capabilities")
+    registry_register_parser.add_argument("--description", "-d", default="", help="Description")
+    registry_register_parser.add_argument("--endpoint", "-e", help="Endpoint URL")
+    
+    # registry discover
+    registry_discover_parser = registry_subparsers.add_parser("discover", help="Find agents by capability")
+    registry_discover_parser.add_argument("capability", nargs="?", help="Capability to search for")
+    registry_discover_parser.add_argument("--offline", action="store_true", help="Include offline agents")
+    
+    # registry heartbeat
+    registry_heartbeat_parser = registry_subparsers.add_parser("heartbeat", help="Send heartbeat")
+    registry_heartbeat_parser.add_argument("agent_id", help="Agent ID")
+    
+    # registry stats
+    registry_subparsers.add_parser("stats", help="Registry statistics")
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -297,6 +443,30 @@ Environment Variables:
         cli.log(args.event_type, args.action, args.description, args.input_data, args.tags, args.status)
     elif args.command == "graph":
         cli.graph(json_output=args.json)
+    elif args.command == "registry":
+        if not args.registry_command:
+            registry_parser.print_help()
+            sys.exit(1)
+        elif args.registry_command == "list":
+            cli.registry_list(online_only=args.online, json_output=args.json)
+        elif args.registry_command == "register":
+            cli.registry_register(
+                args.name, 
+                capabilities=args.capabilities,
+                description=args.description,
+                endpoint=args.endpoint,
+                json_output=args.json
+            )
+        elif args.registry_command == "discover":
+            cli.registry_discover(
+                capability=args.capability,
+                online_only=not args.offline,
+                json_output=args.json
+            )
+        elif args.registry_command == "heartbeat":
+            cli.registry_heartbeat(args.agent_id)
+        elif args.registry_command == "stats":
+            cli.registry_stats(json_output=args.json)
 
 
 if __name__ == "__main__":

@@ -42,6 +42,19 @@ from .easy import (
     track
 )
 
+# Agent Registry - multi-agent discovery
+from .registry import (
+    register_agent,
+    unregister_agent,
+    discover_agents,
+    get_agent,
+    update_status,
+    heartbeat,
+    Agent as RegistryAgent,
+    Capability,
+    AgentStatus,
+)
+
 # Import integrations (optional dependencies)
 try:
     from .integrations.openai_assistants import (
@@ -71,6 +84,16 @@ __all__ = [
     "entity",
     "link",
     "track",
+    # Agent Registry (multi-agent discovery)
+    "register_agent",
+    "unregister_agent",
+    "discover_agents",
+    "get_agent",
+    "update_status",
+    "heartbeat",
+    "RegistryAgent",
+    "Capability",
+    "AgentStatus",
     # Core schema
     "Agent",
     "Entity",

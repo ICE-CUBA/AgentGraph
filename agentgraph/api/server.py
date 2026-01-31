@@ -32,6 +32,10 @@ except ImportError:
 from ..sharing.hub import get_sharing_hub
 from ..sharing.protocol import ContextEvent, Topic
 
+# Agent Registry
+from .registry_routes import router as registry_router, set_registry
+from ..registry import AgentRegistry
+
 # Initialize FastAPI app
 app = FastAPI(
     title="AgentGraph API",
@@ -98,6 +102,13 @@ app.add_middleware(
 
 # Database instance
 db = Database()
+
+# Agent Registry instance
+agent_registry = AgentRegistry()
+set_registry(agent_registry)
+
+# Mount registry routes
+app.include_router(registry_router)
 
 
 # ==================== Pydantic Models ====================
