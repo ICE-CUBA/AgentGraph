@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentGraph - The Memory Layer for AI Agents</title>
+    <meta name="description" content="Track, visualize, and share context between AI agents. Know what your agents are doing.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .code-block {
+            background: #1e1e2e;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .code-block code {
+            color: #cdd6f4;
+            font-size: 14px;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white">
+    <!-- Hero Section -->
+    <header class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20"></div>
+        <nav class="relative z-10 max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🧠</span>
+                <span class="text-xl font-bold">AgentGraph</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="#features" class="text-gray-300 hover:text-white">Features</a>
+                <a href="#integrations" class="text-gray-300 hover:text-white">Integrations</a>
+                <a href="https://github.com/ICE-CUBA/AgentGraph" class="text-gray-300 hover:text-white">GitHub</a>
+                <a href="#quickstart" class="gradient-bg px-4 py-2 rounded-lg font-medium hover:opacity-90">Get Started</a>
+            </div>
+        </nav>
+        
+        <div class="relative z-10 max-w-4xl mx-auto px-6 py-24 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6">
+                The <span class="gradient-text">Memory Layer</span><br>for AI Agents
+            </h1>
+            <p class="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+                Track, visualize, and share context between AI agents. 
+                Know what your agents are doing and help them collaborate.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#quickstart" class="gradient-bg px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition">
+                    Start Building →
+                </a>
+                <a href="https://github.com/ICE-CUBA/AgentGraph" class="bg-gray-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-700 transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    Star on GitHub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Problem Section -->
+    <section class="py-20 border-t border-gray-800">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-12">The Problem with AI Agents Today</h2>
+            <div class="grid md:grid-cols-4 gap-6">
+                <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                    <div class="text-3xl mb-4">🔇</div>
+                    <h3 class="font-semibold mb-2">No Memory</h3>
+                    <p class="text-gray-400 text-sm">Agents work but forget what they did</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                    <div class="text-3xl mb-4">🏝️</div>
+                    <h3 class="font-semibold mb-2">Isolated</h3>
+                    <p class="text-gray-400 text-sm">Can't collaborate with other agents</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                    <div class="text-3xl mb-4">🙈</div>
+                    <h3 class="font-semibold mb-2">No Visibility</h3>
+                    <p class="text-gray-400 text-sm">Owners can't audit their actions</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                    <div class="text-3xl mb-4">💨</div>
+                    <h3 class="font-semibold mb-2">Context Lost</h3>
+                    <p class="text-gray-400 text-sm">Everything vanishes between sessions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 border-t border-gray-800">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-4">Everything You Need</h2>
+            <p class="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+                A complete observability and memory layer for your AI agents
+            </p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">📊</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Activity Tracking</h3>
+                    <p class="text-gray-400">Log every action, decision, and tool call. See exactly what your agents are doing in real-time.</p>
+                </div>
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">🕸️</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Memory Graph</h3>
+                    <p class="text-gray-400">Entities, relationships, and events in a queryable graph. Interactive D3.js visualization included.</p>
+                </div>
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">🔍</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Agent Queries</h3>
+                    <p class="text-gray-400">"What happened to customer X?" Agents can ask questions about past activities.</p>
+                </div>
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">⚡</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Real-time WebSocket</h3>
+                    <p class="text-gray-400">Events stream live to your dashboard. No polling, instant updates.</p>
+                </div>
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Dashboard UI</h3>
+                    <p class="text-gray-400">Beautiful Vue.js dashboard out of the box. See agents, events, and relationships at a glance.</p>
+                </div>
+                <div class="feature-card bg-gray-900 rounded-xl p-8 border border-gray-800 transition-all">
+                    <div class="w-12 h-12 gradient-bg rounded-lg flex items-center justify-center mb-6">
+                        <span class="text-2xl">🔌</span>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">Easy Integration</h3>
+                    <p class="text-gray-400">One-line setup for LangChain, OpenAI Assistants, and CrewAI. Works with any Python agent.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integrations Section -->
+    <section id="integrations" class="py-20 border-t border-gray-800 bg-gray-900/50">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-4">Works With Your Stack</h2>
+            <p class="text-gray-400 text-center mb-12">Drop-in integrations for all major agent frameworks</p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-900 rounded-xl p-8 border border-gray-800 text-center">
+                    <div class="text-4xl mb-4">🦜</div>
+                    <h3 class="text-xl font-semibold mb-2">LangChain</h3>
+                    <p class="text-gray-400 text-sm mb-4">Callback handler for automatic tracking</p>
+                    <code class="text-sm text-purple-400">LangChainCallback(client)</code>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-8 border border-gray-800 text-center">
+                    <div class="text-4xl mb-4">🤖</div>
+                    <h3 class="text-xl font-semibold mb-2">OpenAI Assistants</h3>
+                    <p class="text-gray-400 text-sm mb-4">Track runs, steps, and tool calls</p>
+                    <code class="text-sm text-purple-400">tracker.wrap(client)</code>
+                </div>
+                <div class="bg-gray-900 rounded-xl p-8 border border-gray-800 text-center">
+                    <div class="text-4xl mb-4">👥</div>
+                    <h3 class="text-xl font-semibold mb-2">CrewAI</h3>
+                    <p class="text-gray-400 text-sm mb-4">Multi-agent crew tracking</p>
+                    <code class="text-sm text-purple-400">tracker.wrap(crew)</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quickstart" class="py-20 border-t border-gray-800">
+        <div class="max-w-4xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-12">Get Started in 60 Seconds</h2>
+            
+            <div class="space-y-8">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 gradient-bg rounded-full flex items-center justify-center font-bold">1</span>
+                        <h3 class="text-xl font-semibold">Install AgentGraph</h3>
+                    </div>
+                    <div class="code-block p-4">
+                        <code>pip install agentgraph[server]</code>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 gradient-bg rounded-full flex items-center justify-center font-bold">2</span>
+                        <h3 class="text-xl font-semibold">Start the Server</h3>
+                    </div>
+                    <div class="code-block p-4">
+                        <code>agentgraph-server</code>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-2">Dashboard at http://localhost:8080</p>
+                </div>
+                
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 gradient-bg rounded-full flex items-center justify-center font-bold">3</span>
+                        <h3 class="text-xl font-semibold">Track Your Agents</h3>
+                    </div>
+                    <div class="code-block p-4">
+<pre><code><span class="text-purple-400">from</span> agentgraph <span class="text-purple-400">import</span> AgentGraphClient
+
+client = AgentGraphClient(api_key=<span class="text-green-400">"..."</span>)
+
+<span class="text-gray-500"># Log events</span>
+client.log(<span class="text-green-400">"tool.call"</span>, action=<span class="text-green-400">"search"</span>, input_data={...})
+
+<span class="text-gray-500"># Query history</span>
+result = client.query(<span class="text-green-400">"what happened to customer X?"</span>)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 border-t border-gray-800">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-4">Ready to Build Smarter Agents?</h2>
+            <p class="text-gray-400 mb-8">Open source. Self-hosted. No vendor lock-in.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="https://github.com/ICE-CUBA/AgentGraph" class="gradient-bg px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition">
+                    View on GitHub →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-8 border-t border-gray-800">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🧠</span>
+                <span class="font-semibold">AgentGraph</span>
+            </div>
+            <p class="text-gray-500 text-sm">Built for the future of multi-agent AI systems</p>
+            <div class="flex items-center gap-4">
+                <a href="https://github.com/ICE-CUBA/AgentGraph" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
